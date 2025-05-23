@@ -6,7 +6,13 @@ const vehicleController = require("../controllers/vehicleController");
 const { authenticate } = require("../middleware/auth");
 
 // All vehicle routes require authentication
-router.post("/", authenticate, vehicleController.addVehicle);
-router.get("/", authenticate, vehicleController.getUserVehicles);
+router.use(authenticate);
+
+// CRUD Endpoints
+router.post("/", vehicleController.addVehicle);                 // POST /api/vehicles
+router.get("/", vehicleController.getUserVehicles);             // GET /api/vehicles
+router.get("/:id", vehicleController.getVehicleById);           // GET /api/vehicles/:id
+router.put("/:id", vehicleController.updateVehicle);            // PUT /api/vehicles/:id
+router.delete("/:id", vehicleController.deleteVehicle);         // DELETE /api/vehicles/:id
 
 module.exports = router;

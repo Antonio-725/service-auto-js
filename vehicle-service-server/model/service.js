@@ -1,3 +1,4 @@
+//model/service.js
 const { Sequelize, DataTypes } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
@@ -13,18 +14,18 @@ module.exports = (sequelize, DataTypes) => {
     },
     mechanicId: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true, // Allow null initially, as mechanic is assigned later
     },
     vehicleId: {
       type: DataTypes.UUID,
       allowNull: false,
     },
     status: {
-      type: DataTypes.ENUM("In Progress", "Completed", "Cancelled"),
-      defaultValue: "In Progress",
+      type: DataTypes.ENUM("Pending", "In Progress", "Completed", "Cancelled"),
+      defaultValue: "Pending", // Default to Pending for new services
     },
     date: {
-      type: DataTypes.DATEONLY, // Stores date without time (e.g., "2025-05-20")
+      type: DataTypes.DATEONLY,
       allowNull: false,
     },
     rating: {

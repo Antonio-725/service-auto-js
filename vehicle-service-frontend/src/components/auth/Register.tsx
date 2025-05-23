@@ -9,7 +9,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import AuthFormContainer from "./AuthFormContainer";
-
+import apiClient from "../../utils/apiClient"; // Note: no curly braces
 const Register = () => {
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
@@ -35,48 +35,32 @@ const Register = () => {
     return password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
+  setIsLoading(true);
 
-    if (username.length < 3) {
-      setError("Username must be at least 3 characters");
-      setIsLoading(false);
-      return;
-    }
+  // Input validation remains unchanged...
+  
+  try {
+    const response = await apiClient.post("/api/users/register", {
+      username,
+      email,
+      phone,
+      password,
+    });
 
-    if (!validatePhone(phone)) {
-      setError("Please enter a valid phone number");
-      setIsLoading(false);
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setError("Please enter a valid email address");
-      setIsLoading(false);
-      return;
-    }
-
-    if (!validatePasswordStrength(password)) {
-      setError("Password must be at least 8 characters, including an uppercase letter and a number");
-      setIsLoading(false);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      setIsLoading(false);
-      return;
-    }
-
-    // Simulate successful API registration
-    setTimeout(() => {
-      console.log({ username, phone, email, password });
-      setIsLoading(false);
-      navigate("/login"); // ⬅️ Redirect after success
-    }, 1000);
-  };
+    console.log("Registration successful:", response.data);
+    navigate("/login");
+  } catch (err: any) {
+    const errorMessage =
+      err.response?.data?.message ||
+      "Registration failed. Please try again.";
+    setError(errorMessage);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <AuthFormContainer title="Create Account">

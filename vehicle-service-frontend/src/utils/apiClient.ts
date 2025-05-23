@@ -1,4 +1,4 @@
-// apiClient.ts
+//utils/apiClient.ts
 import axios from "axios";
 
 const apiClient = axios.create({
@@ -28,6 +28,22 @@ export const login = async (email: string, password: string) => {
     const errorMessage =
       error.response?.data?.message || "An unexpected error occurred";
     throw new Error(errorMessage);
+  }
+};
+// src/services/apiClient.ts
+
+export const registerUser = async (username: string, email: string, phone: string, password: string) => {
+  try {
+    const response = await apiClient.post("/api/users/register", {
+      username,
+      email,
+      phone,
+      password,
+    });
+    return response.data;
+  } catch (error: any) {
+    const message = error.response?.data?.message || "Registration failed";
+    throw new Error(message);
   }
 };
 

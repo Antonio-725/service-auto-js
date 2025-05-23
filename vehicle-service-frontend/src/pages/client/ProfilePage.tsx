@@ -8,7 +8,8 @@ import {
   Divider, 
   Switch,
   FormControlLabel,
-  Grid
+  Grid,
+  CircularProgress
 } from "@mui/material";
 import { 
   Edit as EditIcon,
@@ -19,18 +20,66 @@ import {
   Lock as LockIcon,
   AccountCircle as AccountCircleIcon
 } from "@mui/icons-material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import apiClient from "../../utils/apiClient";
+import { useNavigate } from "react-router-dom";
+
+interface UserData {
+  id: string;
+  username: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  role: string;
+  createdAt: string;
+  notifications?: boolean;
+  twoFactorAuth?: boolean;
+}
 
 const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [userData, setUserData] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+254 712 345 678",
-    address: "1234 Main St, Nairobi, Kenya",
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState<UserData>({
+    id: '',
+    username: '',
+    email: '',
+    phone: '',
+    address: '',
+    role: 'user',
+    createdAt: '',
     notifications: true,
     twoFactorAuth: false
   });
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      try {
+        const response = await apiClient.get("/api/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setUserData({
+          ...response.data,
+          // Add default values for fields that might not come from the backend
+          address: response.data.address || '',
+          notifications: response.data.notifications !== undefined ? response.data.notifications : true,
+          twoFactorAuth: response.data.twoFactorAuth !== undefined ? response.data.twoFactorAuth : false
+        });
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, checked } = e.target;
@@ -40,11 +89,32 @@ const ProfilePage = () => {
     }));
   };
 
-  const handleSave = () => {
-    setIsEditing(false);
-    // Here you would typically call an API to save the changes
-    console.log("Saved:", userData);
+  const handleSave = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      await apiClient.put(`/api/users/${userData.id}`, userData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setIsEditing(false);
+      // Optionally: Show success message
+    } catch (error) {
+      console.error("Error updating user data:", error);
+      // Optionally: Show error message
+    }
   };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -56,14 +126,14 @@ const ProfilePage = () => {
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
           <Box display="flex" alignItems="center">
             <Avatar sx={{ width: 80, height: 80, fontSize: 32, mr: 3 }}>
-              {userData.name.charAt(0)}
+              {userData.username.charAt(0).toUpperCase()}
             </Avatar>
             <Box>
               <Typography variant="h5" fontWeight="bold">
-                {userData.name}
+                {userData.username}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Client since May 2023
+                Member since {new Date(userData.createdAt).toLocaleDateString()}
               </Typography>
             </Box>
           </Box>
@@ -97,9 +167,9 @@ const ProfilePage = () => {
             <Box mb={3}>
               <TextField
                 fullWidth
-                label="Full Name"
-                name="name"
-                value={userData.name}
+                label="Username"
+                name="username"
+                value={userData.username}
                 onChange={handleInputChange}
                 disabled={!isEditing}
                 InputProps={{
@@ -131,7 +201,7 @@ const ProfilePage = () => {
                 fullWidth
                 label="Phone Number"
                 name="phone"
-                value={userData.phone}
+                value={userData.phone || ''}
                 onChange={handleInputChange}
                 disabled={!isEditing}
                 InputProps={{
@@ -147,7 +217,7 @@ const ProfilePage = () => {
                 fullWidth
                 label="Address"
                 name="address"
-                value={userData.address}
+                value={userData.address || ''}
                 onChange={handleInputChange}
                 disabled={!isEditing}
                 multiline
@@ -170,7 +240,7 @@ const ProfilePage = () => {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={userData.notifications}
+                    checked={userData.notifications || false}
                     onChange={handleInputChange}
                     name="notifications"
                     color="primary"
@@ -193,7 +263,7 @@ const ProfilePage = () => {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={userData.twoFactorAuth}
+                    checked={userData.twoFactorAuth || false}
                     onChange={handleInputChange}
                     name="twoFactorAuth"
                     color="primary"

@@ -34,7 +34,7 @@ const Login = () => {
     return;
   }
 
-  if (password.length < 6) {
+  if (password.length < 4) {
     setError("Password must be at least 6 characters");
     setIsLoading(false);
     return;

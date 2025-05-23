@@ -9,6 +9,7 @@ fs.readdirSync(__dirname)
   .filter(file => file !== "index.js")
   .forEach(file => {
     const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
+    console.log(`Loaded model: ${model.name} from file: ${file}`);
     db[model.name] = model;
   });
 
@@ -22,9 +23,7 @@ Object.keys(db).forEach(modelName => {
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
-// Optional: Sync database (remove in production or handle via migrations)
-sequelize.sync({ force: false }).catch(err => {
-  console.error('Failed to sync database:', err);
-});
+// Debug: Log loaded models
+console.log('Loaded models:', Object.keys(db));
 
 module.exports = db;

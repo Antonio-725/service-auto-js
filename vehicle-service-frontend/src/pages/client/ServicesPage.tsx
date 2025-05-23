@@ -1,75 +1,149 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Box, Typography, Paper, Button, Grid, Card, CardContent, Chip, Dialog,
-  DialogTitle, DialogContent, TextField, DialogActions, Avatar, IconButton,
-  Container, Menu, MenuItem, ListItemIcon, ListItemText, Toolbar, AppBar,
-  Badge, Tooltip, Rating, Fade,
+  Box,
+  Typography,
+  Paper,
+  Button,
+  Grid,
+  Card,
+  CardContent,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TextField,
+  DialogActions,
+  Avatar,
+  IconButton,
+  Container,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Toolbar,
+  AppBar,
+  Tooltip,
+  Rating,
+  Fade,
+  Divider,
+  CircularProgress,
 } from "@mui/material";
 import {
-  Add as AddIcon, Build, CheckCircle, HourglassEmpty, MoreVert, DirectionsCar,
-  Edit, Delete, CalendarToday, Receipt, Star, Menu as MenuIcon, Notifications as NotificationsIcon,
+  Add as AddIcon,
+  Build,
+  HourglassEmpty,
+  MoreVert,
+  DirectionsCar,
+  Edit,
+  Delete,
+  Receipt,
+  Star,
   ExitToApp as ExitToAppIcon,
+  CheckCircle,
+  CalendarToday,
 } from "@mui/icons-material";
-import { Bar } from "react-chartjs-2";
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip as ChartTooltip, Legend } from "chart.js";
-//import { apiClient } from '../../utils/apiClient';
-import apiClient from '../../utils/apiClient';
-import { Vehicle, Service, ServiceHistory } from "../../types/index";
+import apiClient from "../../utils/apiClient";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, ChartTooltip, Legend);
+interface Vehicle {
+  id: string; // Changed to string to match UUID
+  make: string;
+  model: string;
+  year: string;
+  plate: string;
+}
+
+interface Service {
+  id: string;
+  description: string;
+  mechanicId: string;
+  vehicleId: string;
+  status: 'In Progress' | 'Completed' | 'Cancelled';
+  date: string;
+  rating?: number;
+  mechanic?: string; // Populated by joining with User model
+}
 
 const ServicesPage = () => {
   const navigate = useNavigate();
-  //const [vehicles, setVehicles] = useState([]);
 
+  // State
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-const [currentServices, setCurrentServices] = useState<Service[]>([]);
-const [serviceHistory, setServiceHistory] = useState<ServiceHistory[]>([]);
-  //const [currentServices, setCurrentServices] = useState([]);
-  //const [serviceHistory, setServiceHistory] = useState([]);
+  const [currentServices, setCurrentServices] = useState<Service[]>([]);
+  const [serviceHistory, setServiceHistory] = useState<Service[]>([]);
   const [openVehicleDialog, setOpenVehicleDialog] = useState(false);
-  const [openRatingDialog, setOpenRatingDialog] = useState(false);
   const [vehicleData, setVehicleData] = useState({ make: "", model: "", year: "", plate: "" });
-  const [ratingServiceId, setRatingServiceId] = useState(null);
-  const [ratingValue, setRatingValue] = useState(0);
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [anchorElUser, setAnchorElUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+  const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
+  const [loading, setLoading] = useState({
+    vehicles: false,
+    currentServices: false,
+    serviceHistory: false,
+  });
+  const [openRatingDialog, setOpenRatingDialog] = useState(false);
+  const [selectedServiceToRate, setSelectedServiceToRate] = useState<string | null>(null);
+  const [ratingValue, setRatingValue] = useState<number | null>(null);
+  const [selectedVehicleDetails, setSelectedVehicleDetails] = useState<Vehicle | null>(null);
+  const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
 
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId");
   const username = localStorage.getItem("username") || "User";
 
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [editVehicleData, setEditVehicleData] = useState({
+  id: '',
+  make: '',
+  model: '',
+  year: '',
+  plate: ''
+});
+
+  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
-  setLoading(true);
-  try {
-    const [vehiclesRes, currentRes, historyRes] = await Promise.all([
-      apiClient.get("/vehicles", {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      apiClient.get("/services/current", {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      apiClient.get("/services/history", {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-    ]);
+      if (!token || !userId) {
+        navigate("/login");
+        return;
+      }
 
-    setVehicles(vehiclesRes.data);
-    setCurrentServices(currentRes.data);
-    setServiceHistory(historyRes.data);
-  } catch (error) {
-    console.error("Fetch error:", error);
-  }
-  setLoading(false);
-};
-    if (token && userId) fetchData();
-  }, [token, userId]);
+      try {
+        // Fetch vehicles
+        setLoading((prev) => ({ ...prev, vehicles: true }));
+        const vehiclesRes = await apiClient.get("/api/vehicles", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setVehicles(vehiclesRes.data);
 
-  const handleMenuOpen = (event, vehicleId) => {
+        // Fetch current services
+        setLoading((prev) => ({ ...prev, currentServices: true }));
+        const currentRes = await apiClient.get("/api/services", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCurrentServices(currentRes.data);
+
+        // Fetch service history
+        setLoading((prev) => ({ ...prev, serviceHistory: true }));
+        const historyRes = await apiClient.get("/api/services", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setServiceHistory(historyRes.data);
+      } catch (error) {
+        console.error("Fetch error:", error);
+      } finally {
+        setLoading({
+          vehicles: false,
+          currentServices: false,
+          serviceHistory: false,
+        });
+      }
+    };
+    fetchData();
+  }, [token, userId, navigate]);
+
+  // Handlers
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, vehicleId: string) => {
     setAnchorEl(event.currentTarget);
     setSelectedVehicle(vehicleId);
   };
@@ -79,64 +153,66 @@ const [serviceHistory, setServiceHistory] = useState<ServiceHistory[]>([]);
     setSelectedVehicle(null);
   };
 
-const handleAddVehicle = async () => {
-  try {
-    const res = await apiClient.post("/vehicles", vehicleData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    setVehicles((prev) => [...prev, res.data]);
-    setVehicleData({ make: "", model: "", year: "", plate: "" });
-    setOpenVehicleDialog(false);
-  } catch (error: any) {
-    console.error("Add vehicle error:", error.message);
+  const handleAddVehicle = async () => {
+    try {
+      const res = await apiClient.post("/api/vehicles", vehicleData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setVehicles((prev) => [...prev, res.data]);
+      setVehicleData({ make: "", model: "", year: "", plate: "" });
+      setOpenVehicleDialog(false);
+    } catch (error: any) {
+      console.error("Add vehicle error:", error.message);
+    }
+  };
+
+  const handleDeleteVehicle = async () => {
+  if (selectedVehicle && token) {
+    try {
+      await apiClient.delete(`/api/vehicles/${selectedVehicle}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setVehicles((prev) => prev.filter((v) => v.id !== selectedVehicle));
+    } catch (error) {
+      console.error("Delete vehicle error:", error);
+    }
+    handleMenuClose();
   }
 };
 
-
-  const handleDeleteVehicle = async () => {
-    if (selectedVehicle) {
-      try {
-        await fetch(`/api/vehicles/${selectedVehicle}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setVehicles(vehicles.filter((v) => v.id !== selectedVehicle));
-      } catch (error) {
-        console.error("Delete vehicle error:", error);
-      }
-      handleMenuClose();
-    }
+  const handleRequestService = (vehicleId: string) => {
+    navigate(`/book-service?vehicleId=${vehicleId}`);
   };
 
   const handleRateService = async () => {
-    if (ratingServiceId && ratingValue) {
+    if (selectedServiceToRate && ratingValue !== null && token) {
       try {
-        await fetch(`/api/services/${ratingServiceId}/rate`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ rating: ratingValue }),
-        });
-        setServiceHistory((prev) =>
-          prev.map((s) => (s.id === ratingServiceId ? { ...s, rating: ratingValue } : s))
+        await apiClient.patch(
+          `/api/services/${selectedServiceToRate}/rate`,
+          { rating: ratingValue },
+          { headers: { Authorization: `Bearer ${token}` } }
         );
+
+        setServiceHistory((prev) =>
+          prev.map((service) =>
+            service.id === selectedServiceToRate
+              ? { ...service, rating: ratingValue }
+              : service
+          )
+        );
+
         setOpenRatingDialog(false);
-        setRatingServiceId(null);
-        setRatingValue(0);
+        setSelectedServiceToRate(null);
+        setRatingValue(null);
       } catch (error) {
-        console.error("Rate service error:", error);
+        console.error("Error rating service:", error);
       }
     }
   };
 
-  const handleOpenRatingDialog = (serviceId) => {
-    setRatingServiceId(serviceId);
+  const handleOpenRatingDialog = (serviceId: string) => {
+    setSelectedServiceToRate(serviceId);
     setOpenRatingDialog(true);
-  };
-
-  const handleRequestService = (vehicleId) => {
-    navigate(`/book-service?vehicleId=${vehicleId}`);
   };
 
   const handleLogout = () => {
@@ -146,7 +222,7 @@ const handleAddVehicle = async () => {
     navigate("/login");
   };
 
-  const handleOpenUserMenu = (event) => {
+  const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorElUser(event.currentTarget);
   };
 
@@ -154,24 +230,55 @@ const handleAddVehicle = async () => {
     setAnchorElUser(null);
   };
 
-  // Chart Data
-  const serviceCounts = serviceHistory.reduce((acc, s) => {
-    acc[s.service] = (acc[s.service] || 0) + 1;
-    return acc;
-  }, {});
-  const chartData = {
-    labels: Object.keys(serviceCounts),
-    datasets: [{
-      label: "Service Bookings",
-      data: Object.values(serviceCounts),
-      backgroundColor: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
-      borderColor: ["#1e3a8a", "#065f46", "#b45309", "#991b1b", "#5b21b6"],
-      borderWidth: 1,
-    }],
+  const handleViewVehicleDetails = async (vehicleId: string) => {
+    try {
+      const res = await apiClient.get(`/api/vehicles/${vehicleId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSelectedVehicleDetails(res.data);
+      setOpenDetailsDialog(true);
+    } catch (error) {
+      console.error("Error fetching vehicle details:", error);
+    }
   };
+
+  const getVehicleInfo = (vehicleId: string) => {
+    const vehicle = vehicles.find((v) => v.id === vehicleId);
+    return vehicle ? `${vehicle.make} ${vehicle.model}` : "Unknown Vehicle";
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Completed":
+        return "success";
+      case "In Progress":
+        return "info";
+      case "Cancelled":
+        return "error";
+      default:
+        return "default";
+    }
+  };
+
+  // Add this handler function
+const handleEditVehicle = async () => {
+  try {
+    const res = await apiClient.put(`/api/vehicles/${editVehicleData.id}`, editVehicleData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    
+    setVehicles(prev => 
+      prev.map(v => v.id === editVehicleData.id ? res.data : v)
+    );
+    setOpenEditDialog(false);
+  } catch (error) {
+    console.error("Edit vehicle error:", error);
+  }
+};
 
   return (
     <Box sx={{ flexGrow: 1, bgcolor: "#f5f5f7", minHeight: "100vh" }}>
+      {/* App Bar */}
       <AppBar
         position="fixed"
         color="default"
@@ -185,17 +292,12 @@ const handleAddVehicle = async () => {
       >
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold", color: "#2a3e78" }}>
-            Services
+            AutoCare Hub
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <Typography variant="body1" sx={{ mr: 2, color: "#2a3e78" }}>
               Welcome, {username}!
             </Typography>
-            <IconButton size="large" aria-label="notifications" color="inherit">
-              <Badge badgeContent={4} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
             <Tooltip title="Account settings">
               <IconButton onClick={handleOpenUserMenu} sx={{ ml: 2 }}>
                 <Avatar sx={{ bgcolor: "#2a3e78" }}>
@@ -223,18 +325,25 @@ const handleAddVehicle = async () => {
       </AppBar>
       <Toolbar />
 
+      {/* Main Content */}
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Fade in timeout={500}>
           <Box>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
               <Typography variant="h4" fontWeight="bold" color="#2a3e78">
-                My Services
+                My Dashboard
               </Typography>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => setOpenVehicleDialog(true)}
-                sx={{ borderRadius: 8, textTransform: "none", px: 3, bgcolor: "#2a3e78", "&:hover": { bgcolor: "#1e2a5a" } }}
+                sx={{
+                  borderRadius: 8,
+                  textTransform: "none",
+                  px: 3,
+                  bgcolor: "#2a3e78",
+                  "&:hover": { bgcolor: "#1e2a5a" },
+                }}
               >
                 Add Vehicle
               </Button>
@@ -294,7 +403,12 @@ const handleAddVehicle = async () => {
                   variant="contained"
                   onClick={handleAddVehicle}
                   disabled={!vehicleData.make || !vehicleData.model || !vehicleData.year || !vehicleData.plate}
-                  sx={{ textTransform: "none", px: 3, bgcolor: "#2a3e78", "&:hover": { bgcolor: "#1e2a5a" } }}
+                  sx={{
+                    textTransform: "none",
+                    px: 3,
+                    bgcolor: "#2a3e78",
+                    "&:hover": { bgcolor: "#1e2a5a" },
+                  }}
                 >
                   Add Vehicle
                 </Button>
@@ -302,34 +416,120 @@ const handleAddVehicle = async () => {
             </Dialog>
 
             {/* Rate Service Dialog */}
-            <Dialog open={openRatingDialog} onClose={() => setOpenRatingDialog(false)} maxWidth="xs" fullWidth>
-              <DialogTitle sx={{ bgcolor: "#2a3e78", color: "white", fontWeight: "bold" }}>
-                Rate Service
-              </DialogTitle>
-              <DialogContent sx={{ pt: 3, textAlign: "center" }}>
-                <Typography variant="body1" mb={2}>
-                  How would you rate this service?
-                </Typography>
-                <Rating
-                  value={ratingValue}
-                  onChange={(event, newValue) => setRatingValue(newValue)}
-                  size="large"
-                />
+            <Dialog open={openRatingDialog} onClose={() => setOpenRatingDialog(false)}>
+              <DialogTitle>Rate This Service</DialogTitle>
+              <DialogContent>
+                <Box display="flex" flexDirection="column" alignItems="center" p={2}>
+                  <Rating
+                    value={ratingValue}
+                    onChange={(event, newValue) => setRatingValue(newValue)}
+                    size="large"
+                    precision={1} // Changed to integer to match backend validation (1-5)
+                  />
+                </Box>
               </DialogContent>
-              <DialogActions sx={{ p: 3 }}>
-                <Button onClick={() => setOpenRatingDialog(false)} sx={{ textTransform: "none" }}>
-                  Cancel
-                </Button>
+              <DialogActions>
+                <Button onClick={() => setOpenRatingDialog(false)}>Cancel</Button>
                 <Button
-                  variant="contained"
                   onClick={handleRateService}
-                  disabled={!ratingValue}
-                  sx={{ textTransform: "none", px: 3, bgcolor: "#2a3e78", "&:hover": { bgcolor: "#1e2a5a" } }}
+                  disabled={ratingValue === null}
+                  color="primary"
                 >
                   Submit Rating
                 </Button>
               </DialogActions>
             </Dialog>
+
+            {/* View Vehicle Details Dialog */}
+            <Dialog
+              open={openDetailsDialog}
+              onClose={() => setOpenDetailsDialog(false)}
+              maxWidth="sm"
+              fullWidth
+            >
+              <DialogTitle sx={{ bgcolor: "#2a3e78", color: "white", fontWeight: "bold" }}>
+                Vehicle Details
+              </DialogTitle>
+              <DialogContent sx={{ pt: 3 }}>
+                {selectedVehicleDetails ? (
+                  <Box>
+                    <Typography><strong>Make:</strong> {selectedVehicleDetails.make}</Typography>
+                    <Typography><strong>Model:</strong> {selectedVehicleDetails.model}</Typography>
+                    <Typography><strong>Year:</strong> {selectedVehicleDetails.year}</Typography>
+                    <Typography><strong>Plate:</strong> {selectedVehicleDetails.plate}</Typography>
+                  </Box>
+                ) : (
+                  <Typography>No details found.</Typography>
+                )}
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setOpenDetailsDialog(false)}>Close</Button>
+              </DialogActions>
+            </Dialog>
+            <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} fullWidth maxWidth="sm">
+  <DialogTitle sx={{ bgcolor: "#2a3e78", color: "white", fontWeight: "bold" }}>
+    Edit Vehicle
+  </DialogTitle>
+  <DialogContent sx={{ pt: 3 }}>
+    <Grid container spacing={2}>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Make"
+          fullWidth
+          margin="normal"
+          value={editVehicleData.make}
+          onChange={(e) => setEditVehicleData({ ...editVehicleData, make: e.target.value })}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Model"
+          fullWidth
+          margin="normal"
+          value={editVehicleData.model}
+          onChange={(e) => setEditVehicleData({ ...editVehicleData, model: e.target.value })}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Year"
+          fullWidth
+          margin="normal"
+          type="number"
+          value={editVehicleData.year}
+          onChange={(e) => setEditVehicleData({ ...editVehicleData, year: e.target.value })}
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Plate Number"
+          fullWidth
+          margin="normal"
+          value={editVehicleData.plate}
+          onChange={(e) => setEditVehicleData({ ...editVehicleData, plate: e.target.value })}
+        />
+      </Grid>
+    </Grid>
+  </DialogContent>
+  <DialogActions sx={{ p: 3 }}>
+    <Button onClick={() => setOpenEditDialog(false)} sx={{ textTransform: "none" }}>
+      Cancel
+    </Button>
+    <Button
+      variant="contained"
+      onClick={handleEditVehicle}
+      disabled={!editVehicleData.make || !editVehicleData.model || !editVehicleData.year || !editVehicleData.plate}
+      sx={{
+        textTransform: "none",
+        px: 3,
+        bgcolor: "#2a3e78",
+        "&:hover": { bgcolor: "#1e2a5a" },
+      }}
+    >
+      Save Changes
+    </Button>
+  </DialogActions>
+</Dialog>
 
             {/* My Vehicles Section */}
             <Fade in timeout={700}>
@@ -342,11 +542,9 @@ const handleAddVehicle = async () => {
                     My Vehicles
                   </Typography>
                 </Box>
-                {loading ? (
-                  <Box textAlign="center" py={4}>
-                    <Typography variant="body1" color="text.secondary">
-                      Loading...
-                    </Typography>
+                {loading.vehicles ? (
+                  <Box display="flex" justifyContent="center" py={4}>
+                    <CircularProgress />
                   </Box>
                 ) : vehicles.length === 0 ? (
                   <Box textAlign="center" py={4}>
@@ -362,7 +560,10 @@ const handleAddVehicle = async () => {
                           sx={{
                             borderRadius: 3,
                             transition: "transform 0.3s, box-shadow 0.3s",
-                            "&:hover": { transform: "translateY(-4px)", boxShadow: "0 8px 24px rgba(0,0,0,0.2)" },
+                            "&:hover": {
+                              transform: "translateY(-4px)",
+                              boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+                            },
                           }}
                         >
                           <CardContent>
@@ -385,7 +586,12 @@ const handleAddVehicle = async () => {
                                 size="small"
                                 startIcon={<Build />}
                                 onClick={() => handleRequestService(v.id)}
-                                sx={{ textTransform: "none", borderColor: "#2a3e78", color: "#2a3e78", "&:hover": { bgcolor: "#e8eaf6" } }}
+                                sx={{
+                                  textTransform: "none",
+                                  borderColor: "#2a3e78",
+                                  color: "#2a3e78",
+                                  "&:hover": { bgcolor: "#e8eaf6" },
+                                }}
                               >
                                 Request Service
                               </Button>
@@ -393,9 +599,15 @@ const handleAddVehicle = async () => {
                                 variant="outlined"
                                 size="small"
                                 startIcon={<Receipt />}
-                                sx={{ textTransform: "none", borderColor: "#2a3e78", color: "#2a3e78", "&:hover": { bgcolor: "#e8eaf6" } }}
+                                onClick={() => handleViewVehicleDetails(v.id)}
+                                sx={{
+                                  textTransform: "none",
+                                  borderColor: "#2a3e78",
+                                  color: "#2a3e78",
+                                  "&:hover": { bgcolor: "#e8eaf6" },
+                                }}
                               >
-                                View History
+                                View Details
                               </Button>
                             </Box>
                           </CardContent>
@@ -407,7 +619,7 @@ const handleAddVehicle = async () => {
               </Paper>
             </Fade>
 
-            {/* Current Services Section */}
+            {/* Ongoing Services Section */}
             <Fade in timeout={900}>
               <Paper sx={{ p: 3, mb: 4, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
                 <Box display="flex" alignItems="center" mb={3}>
@@ -415,14 +627,12 @@ const handleAddVehicle = async () => {
                     <HourglassEmpty />
                   </Avatar>
                   <Typography variant="h5" fontWeight="bold" color="#2a3e78">
-                    Current Services
+                    Ongoing Services
                   </Typography>
                 </Box>
-                {loading ? (
-                  <Box textAlign="center" py={4}>
-                    <Typography variant="body1" color="text.secondary">
-                      Loading...
-                    </Typography>
+                {loading.currentServices ? (
+                  <Box display="flex" justifyContent="center" py={4}>
+                    <CircularProgress />
                   </Box>
                 ) : currentServices.length === 0 ? (
                   <Box textAlign="center" py={4}>
@@ -438,31 +648,40 @@ const handleAddVehicle = async () => {
                           <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center">
                               <Box>
-                                <Typography variant="h6" fontWeight="bold" color="#2a3e78">
-                                  {service.service}
+                                <Typography variant="h6" fontWeight="bold">
+                                  {service.description}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                  {service.vehicle} • {service.mechanic}
+                                  {getVehicleInfo(service.vehicleId)}
                                 </Typography>
+                                {service.mechanic && (
+                                  <Typography variant="body2" color="text.secondary">
+                                    Mechanic: {service.mechanic}
+                                  </Typography>
+                                )}
                               </Box>
                               <Chip
-                                icon={<HourglassEmpty />}
                                 label={service.status}
-                                color="warning"
-                                sx={{ fontWeight: "bold" }}
+                                color={getStatusColor(service.status)}
+                                sx={{ textTransform: "capitalize" }}
                               />
                             </Box>
-                            <Box mt={2} display="flex" justifyContent="space-between" alignItems="center">
+                            <Divider sx={{ my: 2 }} />
+                            <Box display="flex" justifyContent="space-between" alignItems="center">
                               <Box display="flex" alignItems="center">
                                 <CalendarToday color="action" sx={{ mr: 1 }} />
                                 <Typography variant="body2">
-                                  Scheduled: {service.date}
+                                  Scheduled: {new Date(service.date).toLocaleDateString()}
                                 </Typography>
                               </Box>
                               <Button
                                 variant="contained"
                                 size="small"
-                                sx={{ textTransform: "none", bgcolor: "#2a3e78", "&:hover": { bgcolor: "#1e2a5a" } }}
+                                sx={{
+                                  textTransform: "none",
+                                  bgcolor: "#2a3e78",
+                                  "&:hover": { bgcolor: "#1e2a5a" },
+                                }}
                               >
                                 Track Service
                               </Button>
@@ -487,11 +706,9 @@ const handleAddVehicle = async () => {
                     Service History
                   </Typography>
                 </Box>
-                {loading ? (
-                  <Box textAlign="center" py={4}>
-                    <Typography variant="body1" color="text.secondary">
-                      Loading...
-                    </Typography>
+                {loading.serviceHistory ? (
+                  <Box display="flex" justifyContent="center" py={4}>
+                    <CircularProgress />
                   </Box>
                 ) : serviceHistory.length === 0 ? (
                   <Box textAlign="center" py={4}>
@@ -501,46 +718,56 @@ const handleAddVehicle = async () => {
                   </Box>
                 ) : (
                   <Grid container spacing={3}>
-                    {serviceHistory.map((history) => (
-                      <Grid item xs={12} key={history.id}>
+                    {serviceHistory.map((service) => (
+                      <Grid item xs={12} key={service.id}>
                         <Card sx={{ borderRadius: 3 }}>
                           <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center">
                               <Box>
-                                <Typography variant="h6" fontWeight="bold" color="#2a3e78">
-                                  {history.service}
+                                <Typography variant="h6" fontWeight="bold">
+                                  {service.description}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                  {history.vehicle} • {history.mechanic}
+                                  {getVehicleInfo(service.vehicleId)}
                                 </Typography>
+                                {service.mechanic && (
+                                  <Typography variant="body2" color="text.secondary">
+                                    Serviced by: {service.mechanic}
+                                  </Typography>
+                                )}
                               </Box>
                               <Chip
-                                icon={<CheckCircle />}
-                                label={history.status}
-                                color="success"
-                                sx={{ fontWeight: "bold" }}
+                                label={service.status}
+                                color={getStatusColor(service.status)}
+                                sx={{ textTransform: "capitalize" }}
                               />
                             </Box>
-                            <Box mt={2} display="flex" justifyContent="space-between" alignItems="center">
+                            <Divider sx={{ my: 2 }} />
+                            <Box display="flex" justifyContent="space-between" alignItems="center">
                               <Box display="flex" alignItems="center">
                                 <CalendarToday color="action" sx={{ mr: 1 }} />
                                 <Typography variant="body2">
-                                  Completed: {history.date}
+                                  Date: {new Date(service.date).toLocaleDateString()}
                                 </Typography>
                               </Box>
                               <Box display="flex" alignItems="center">
-                                {history.rating ? (
+                                {service.rating ? (
                                   <Box display="flex" alignItems="center" mr={2}>
                                     <Star color="warning" sx={{ mr: 0.5 }} />
-                                    <Typography>{history.rating}/5</Typography>
+                                    <Typography>{service.rating}/5</Typography>
                                   </Box>
                                 ) : (
                                   <Button
                                     variant="outlined"
                                     size="small"
                                     startIcon={<Star />}
-                                    onClick={() => handleOpenRatingDialog(history.id)}
-                                    sx={{ textTransform: "none", mr: 2, borderColor: "#2a3e78", color: "#2a3e78" }}
+                                    onClick={() => handleOpenRatingDialog(service.id)}
+                                    sx={{
+                                      textTransform: "none",
+                                      mr: 2,
+                                      borderColor: "#2a3e78",
+                                      color: "#2a3e78",
+                                    }}
                                   >
                                     Rate Service
                                   </Button>
@@ -549,7 +776,11 @@ const handleAddVehicle = async () => {
                                   variant="outlined"
                                   size="small"
                                   startIcon={<Receipt />}
-                                  sx={{ textTransform: "none", borderColor: "#2a3e78", color: "#2a3e78" }}
+                                  sx={{
+                                    textTransform: "none",
+                                    borderColor: "#2a3e78",
+                                    color: "#2a3e78",
+                                  }}
                                 >
                                   View Invoice
                                 </Button>
@@ -564,44 +795,36 @@ const handleAddVehicle = async () => {
               </Paper>
             </Fade>
 
-            {/* Service Trends Chart */}
-            {serviceHistory.length > 0 && (
-              <Fade in timeout={1300}>
-                <Paper sx={{ p: 3, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
-                  <Typography variant="h5" fontWeight="bold" color="#2a3e78" mb={3}>
-                    Service Trends
-                  </Typography>
-                  <Box sx={{ maxWidth: 600, mx: "auto" }}>
-                    <Bar
-                      data={chartData}
-                      options={{
-                        scales: {
-                          y: { beginAtZero: true, title: { display: true, text: "Number of Bookings" } },
-                          x: { title: { display: true, text: "Service Type" } },
-                        },
-                        plugins: {
-                          legend: { display: false },
-                          title: { display: true, text: "Service Booking Trends", font: { size: 16 } },
-                        },
-                      }}
-                    />
-                  </Box>
-                </Paper>
-              </Fade>
-            )}
-
-            {/* Vehicle Menu */}
-            <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={handleMenuClose}
-            >
-              <MenuItem onClick={handleMenuClose}>
+            {/* Vehicle Context Menu */}
+            <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+              <MenuItem onClick={() => selectedVehicle && handleViewVehicleDetails(selectedVehicle)}>
                 <ListItemIcon>
-                  <Edit fontSize="small" />
+                  <Receipt fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>Edit Vehicle</ListItemText>
+                <ListItemText>View Details</ListItemText>
               </MenuItem>
+              <MenuItem onClick={() => {
+  if (selectedVehicle) {
+    const vehicleToEdit = vehicles.find(v => v.id === selectedVehicle);
+    if (vehicleToEdit) {
+      setEditVehicleData({
+        id: vehicleToEdit.id,
+        make: vehicleToEdit.make,
+        model: vehicleToEdit.model,
+        year: vehicleToEdit.year,
+        plate: vehicleToEdit.plate
+      });
+      setOpenEditDialog(true);
+    }
+  }
+  handleMenuClose();
+}}>
+  <ListItemIcon>
+    <Edit fontSize="small" />
+  </ListItemIcon>
+  <ListItemText>Edit Vehicle</ListItemText>
+</MenuItem>
+
               <MenuItem onClick={handleDeleteVehicle}>
                 <ListItemIcon>
                   <Delete fontSize="small" color="error" />

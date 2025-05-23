@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "User Auth API",
-    "description": "Test User Authentication and Profile APIs with automatic token saving.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json "
+    "name": "AutoService APIs",
+    "description": "Test User Authentication, Profile, Vehicles, and Services APIs with automatic token saving.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
@@ -60,6 +60,7 @@
                 "exec": [
                   "const response = pm.response.json();",
                   "pm.environment.set(\"token\", response.token);",
+                  "pm.environment.set(\"userId\", response.user.id);",
                   "pm.test(\"Token saved\", function () {",
                   "    pm.expect(response.token).to.exist;",
                   "});"
@@ -81,7 +82,8 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{token}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -100,7 +102,8 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{token}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -109,6 +112,62 @@
               "host": ["localhost"],
               "port": "5000",
               "path": ["api", "users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"updateduser\",\n  \"email\": \"updated@example.com\",\n  \"phone\": \"0700000001\",\n  \"address\": \"123 Updated St, Nairobi\",\n  \"notifications\": true,\n  \"twoFactorAuth\": false\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/users/{{userId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/users/{{userId}}/password",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "users", "{{userId}}", "password"]
             }
           }
         }
@@ -128,7 +187,8 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{token}}",
+                "type": "text"
               }
             ],
             "body": {
@@ -151,7 +211,8 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{token}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -164,13 +225,62 @@
           }
         },
         {
+          "name": "Get Vehicle Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/vehicles/{{vehicleId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "vehicles", "{{vehicleId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Vehicle",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"make\": \"Updated Make\",\n  \"model\": \"Updated Model\",\n  \"year\": \"2021\",\n  \"plate\": \"XYZ-5678\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/vehicles/{{vehicleId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "vehicles", "{{vehicleId}}"]
+            }
+          }
+        },
+        {
           "name": "Delete Vehicle",
           "request": {
             "method": "DELETE",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{token}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -183,6 +293,130 @@
           }
         }
       ]
+    },
+    {
+      "name": "Services",
+      "item": [
+        {
+          "name": "Get Current Services",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/services/current",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "services", "current"]
+            }
+          }
+        },
+        {
+          "name": "Get Service History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/services/history",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "services", "history"]
+            }
+          }
+        },
+        {
+          "name": "Request New Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceType\": \"Oil Change\",\n  \"description\": \"Full synthetic oil change\",\n  \"preferredDate\": \"2023-06-15\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/services",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "services"]
+            }
+          }
+        },
+        {
+          "name": "Rate Completed Service",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/services/{{serviceId}}/rate",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "services", "{{serviceId}}", "rate"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "vehicleId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceId",
+      "value": "",
+      "type": "string"
     }
   ]
 }
