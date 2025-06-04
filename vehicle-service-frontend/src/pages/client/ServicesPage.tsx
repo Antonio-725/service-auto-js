@@ -46,22 +46,27 @@ import {
 import apiClient from "../../utils/apiClient";
 
 interface Vehicle {
-  id: string; // Changed to string to match UUID
+  id: string;
   make: string;
   model: string;
   year: string;
   plate: string;
 }
 
+interface Mechanic {
+  id: string;
+  username: string;
+}
+
 interface Service {
   id: string;
   description: string;
-  mechanicId: string;
+  mechanicId: string | null;
   vehicleId: string;
-  status: 'In Progress' | 'Completed' | 'Cancelled';
+  status: "In Progress" | "Completed" | "Cancelled";
   date: string;
   rating?: number;
-  mechanic?: string; // Populated by joining with User model
+  mechanic?: Mechanic | null; // Updated to reflect API response
 }
 
 const ServicesPage = () => {
@@ -86,19 +91,18 @@ const ServicesPage = () => {
   const [ratingValue, setRatingValue] = useState<number | null>(null);
   const [selectedVehicleDetails, setSelectedVehicleDetails] = useState<Vehicle | null>(null);
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [editVehicleData, setEditVehicleData] = useState({
+    id: "",
+    make: "",
+    model: "",
+    year: "",
+    plate: "",
+  });
 
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId");
   const username = localStorage.getItem("username") || "User";
-
-  const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [editVehicleData, setEditVehicleData] = useState({
-  id: '',
-  make: '',
-  model: '',
-  year: '',
-  plate: ''
-});
 
   // Fetch data
   useEffect(() => {
@@ -121,14 +125,14 @@ const ServicesPage = () => {
         const currentRes = await apiClient.get("/api/services", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setCurrentServices(currentRes.data);
+        setCurrentServices(currentRes.data.filter((s: Service) => s.status === "In Progress"));
 
         // Fetch service history
         setLoading((prev) => ({ ...prev, serviceHistory: true }));
         const historyRes = await apiClient.get("/api/services", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setServiceHistory(historyRes.data);
+        setServiceHistory(historyRes.data.filter((s: Service) => s.status !== "In Progress"));
       } catch (error) {
         console.error("Fetch error:", error);
       } finally {
@@ -167,18 +171,30 @@ const ServicesPage = () => {
   };
 
   const handleDeleteVehicle = async () => {
-  if (selectedVehicle && token) {
+    if (selectedVehicle && token) {
+      try {
+        await apiClient.delete(`/api/vehicles/${selectedVehicle}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setVehicles((prev) => prev.filter((v) => v.id !== selectedVehicle));
+      } catch (error) {
+        console.error("Delete vehicle error:", error);
+      }
+      handleMenuClose();
+    }
+  };
+
+  const handleEditVehicle = async () => {
     try {
-      await apiClient.delete(`/api/vehicles/${selectedVehicle}`, {
+      const res = await apiClient.put(`/api/vehicles/${editVehicleData.id}`, editVehicleData, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setVehicles((prev) => prev.filter((v) => v.id !== selectedVehicle));
+      setVehicles((prev) => prev.map((v) => (v.id === editVehicleData.id ? res.data : v)));
+      setOpenEditDialog(false);
     } catch (error) {
-      console.error("Delete vehicle error:", error);
+      console.error("Edit vehicle error:", error);
     }
-    handleMenuClose();
-  }
-};
+  };
 
   const handleRequestService = (vehicleId: string) => {
     navigate(`/book-service?vehicleId=${vehicleId}`);
@@ -192,15 +208,11 @@ const ServicesPage = () => {
           { rating: ratingValue },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
         setServiceHistory((prev) =>
           prev.map((service) =>
-            service.id === selectedServiceToRate
-              ? { ...service, rating: ratingValue }
-              : service
+            service.id === selectedServiceToRate ? { ...service, rating: ratingValue } : service
           )
         );
-
         setOpenRatingDialog(false);
         setSelectedServiceToRate(null);
         setRatingValue(null);
@@ -259,22 +271,6 @@ const ServicesPage = () => {
         return "default";
     }
   };
-
-  // Add this handler function
-const handleEditVehicle = async () => {
-  try {
-    const res = await apiClient.put(`/api/vehicles/${editVehicleData.id}`, editVehicleData, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    
-    setVehicles(prev => 
-      prev.map(v => v.id === editVehicleData.id ? res.data : v)
-    );
-    setOpenEditDialog(false);
-  } catch (error) {
-    console.error("Edit vehicle error:", error);
-  }
-};
 
   return (
     <Box sx={{ flexGrow: 1, bgcolor: "#f5f5f7", minHeight: "100vh" }}>
@@ -424,7 +420,7 @@ const handleEditVehicle = async () => {
                     value={ratingValue}
                     onChange={(event, newValue) => setRatingValue(newValue)}
                     size="large"
-                    precision={1} // Changed to integer to match backend validation (1-5)
+                    precision={1}
                   />
                 </Box>
               </DialogContent>
@@ -466,70 +462,72 @@ const handleEditVehicle = async () => {
                 <Button onClick={() => setOpenDetailsDialog(false)}>Close</Button>
               </DialogActions>
             </Dialog>
+
+            {/* Edit Vehicle Dialog */}
             <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} fullWidth maxWidth="sm">
-  <DialogTitle sx={{ bgcolor: "#2a3e78", color: "white", fontWeight: "bold" }}>
-    Edit Vehicle
-  </DialogTitle>
-  <DialogContent sx={{ pt: 3 }}>
-    <Grid container spacing={2}>
-      <Grid item xs={12} sm={6}>
-        <TextField
-          label="Make"
-          fullWidth
-          margin="normal"
-          value={editVehicleData.make}
-          onChange={(e) => setEditVehicleData({ ...editVehicleData, make: e.target.value })}
-        />
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        <TextField
-          label="Model"
-          fullWidth
-          margin="normal"
-          value={editVehicleData.model}
-          onChange={(e) => setEditVehicleData({ ...editVehicleData, model: e.target.value })}
-        />
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        <TextField
-          label="Year"
-          fullWidth
-          margin="normal"
-          type="number"
-          value={editVehicleData.year}
-          onChange={(e) => setEditVehicleData({ ...editVehicleData, year: e.target.value })}
-        />
-      </Grid>
-      <Grid item xs={12} sm={6}>
-        <TextField
-          label="Plate Number"
-          fullWidth
-          margin="normal"
-          value={editVehicleData.plate}
-          onChange={(e) => setEditVehicleData({ ...editVehicleData, plate: e.target.value })}
-        />
-      </Grid>
-    </Grid>
-  </DialogContent>
-  <DialogActions sx={{ p: 3 }}>
-    <Button onClick={() => setOpenEditDialog(false)} sx={{ textTransform: "none" }}>
-      Cancel
-    </Button>
-    <Button
-      variant="contained"
-      onClick={handleEditVehicle}
-      disabled={!editVehicleData.make || !editVehicleData.model || !editVehicleData.year || !editVehicleData.plate}
-      sx={{
-        textTransform: "none",
-        px: 3,
-        bgcolor: "#2a3e78",
-        "&:hover": { bgcolor: "#1e2a5a" },
-      }}
-    >
-      Save Changes
-    </Button>
-  </DialogActions>
-</Dialog>
+              <DialogTitle sx={{ bgcolor: "#2a3e78", color: "white", fontWeight: "bold" }}>
+                Edit Vehicle
+              </DialogTitle>
+              <DialogContent sx={{ pt: 3 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Make"
+                      fullWidth
+                      margin="normal"
+                      value={editVehicleData.make}
+                      onChange={(e) => setEditVehicleData({ ...editVehicleData, make: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Model"
+                      fullWidth
+                      margin="normal"
+                      value={editVehicleData.model}
+                      onChange={(e) => setEditVehicleData({ ...editVehicleData, model: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Year"
+                      fullWidth
+                      margin="normal"
+                      type="number"
+                      value={editVehicleData.year}
+                      onChange={(e) => setEditVehicleData({ ...editVehicleData, year: e.target.value })}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Plate Number"
+                      fullWidth
+                      margin="normal"
+                      value={editVehicleData.plate}
+                      onChange={(e) => setEditVehicleData({ ...editVehicleData, plate: e.target.value })}
+                    />
+                  </Grid>
+                </Grid>
+              </DialogContent>
+              <DialogActions sx={{ p: 3 }}>
+                <Button onClick={() => setOpenEditDialog(false)} sx={{ textTransform: "none" }}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleEditVehicle}
+                  disabled={!editVehicleData.make || !editVehicleData.model || !editVehicleData.year || !editVehicleData.plate}
+                  sx={{
+                    textTransform: "none",
+                    px: 3,
+                    bgcolor: "#2a3e78",
+                    "&:hover": { bgcolor: "#1e2a5a" },
+                  }}
+                >
+                  Save Changes
+                </Button>
+              </DialogActions>
+            </Dialog>
 
             {/* My Vehicles Section */}
             <Fade in timeout={700}>
@@ -569,11 +567,8 @@ const handleEditVehicle = async () => {
                           <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center">
                               <Box>
-                                <Typography variant="h6" fontWeight="bold" color="#2a3e78">
+                                <Typography variant="h6" color="#2a3e78">
                                   {v.make} {v.model}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {v.year} • {v.plate}
                                 </Typography>
                               </Box>
                               <IconButton onClick={(e) => handleMenuOpen(e, v.id)}>
@@ -656,7 +651,7 @@ const handleEditVehicle = async () => {
                                 </Typography>
                                 {service.mechanic && (
                                   <Typography variant="body2" color="text.secondary">
-                                    Mechanic: {service.mechanic}
+                                    Mechanic: {service.mechanic.username || 'Unassigned'}
                                   </Typography>
                                 )}
                               </Box>
@@ -732,7 +727,7 @@ const handleEditVehicle = async () => {
                                 </Typography>
                                 {service.mechanic && (
                                   <Typography variant="body2" color="text.secondary">
-                                    Serviced by: {service.mechanic}
+                                    Serviced by: {service.mechanic.username || 'Unassigned'}
                                   </Typography>
                                 )}
                               </Box>
@@ -803,28 +798,29 @@ const handleEditVehicle = async () => {
                 </ListItemIcon>
                 <ListItemText>View Details</ListItemText>
               </MenuItem>
-              <MenuItem onClick={() => {
-  if (selectedVehicle) {
-    const vehicleToEdit = vehicles.find(v => v.id === selectedVehicle);
-    if (vehicleToEdit) {
-      setEditVehicleData({
-        id: vehicleToEdit.id,
-        make: vehicleToEdit.make,
-        model: vehicleToEdit.model,
-        year: vehicleToEdit.year,
-        plate: vehicleToEdit.plate
-      });
-      setOpenEditDialog(true);
-    }
-  }
-  handleMenuClose();
-}}>
-  <ListItemIcon>
-    <Edit fontSize="small" />
-  </ListItemIcon>
-  <ListItemText>Edit Vehicle</ListItemText>
-</MenuItem>
-
+              <MenuItem
+                onClick={() => {
+                  if (selectedVehicle) {
+                    const vehicleToEdit = vehicles.find((v) => v.id === selectedVehicle);
+                    if (vehicleToEdit) {
+                      setEditVehicleData({
+                        id: vehicleToEdit.id,
+                        make: vehicleToEdit.make,
+                        model: vehicleToEdit.model,
+                        year: vehicleToEdit.year,
+                        plate: vehicleToEdit.plate,
+                      });
+                      setOpenEditDialog(true);
+                    }
+                  }
+                  handleMenuClose();
+                }}
+              >
+                <ListItemIcon>
+                  <Edit fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Edit Vehicle</ListItemText>
+              </MenuItem>
               <MenuItem onClick={handleDeleteVehicle}>
                 <ListItemIcon>
                   <Delete fontSize="small" color="error" />

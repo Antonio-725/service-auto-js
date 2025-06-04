@@ -12,11 +12,14 @@ const authenticate = async (req, res, next) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     req.user = user;
+    req.userId = user.id; // ✅ ADD THIS LINE
+
     next();
   } catch (err) {
     return res.status(400).json({ message: "Invalid token" });
   }
 };
+
 
 // Role check middleware
 const authorizeRoles = (...roles) => {

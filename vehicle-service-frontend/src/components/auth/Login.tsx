@@ -10,8 +10,11 @@ import {
 } from "@mui/material";
 import AuthFormContainer from "./AuthFormContainer";
 import { login } from "../../utils/apiClient";
+import { useAuth } from "../../context/AuthContext";
 
 const Login = () => {
+  const { refreshAuthState } = useAuth(); // ✅ Get the refresh function
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -48,6 +51,7 @@ const Login = () => {
     localStorage.setItem("role", res.role);
     localStorage.setItem("userId", res.id);
     localStorage.setItem("username", res.username); // 👈 Add username here
+    refreshAuthState(); // ✅ Refresh auth context
 
     switch (res.role) {
       case "admin":

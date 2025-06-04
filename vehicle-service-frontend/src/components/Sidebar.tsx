@@ -6,15 +6,15 @@ import {
   DirectionsCar as ServicesIcon, CalendarMonth as BookIcon, Receipt as PaymentsIcon,
   Notifications as NotificationsIcon, AccountCircle as ProfileIcon, SupportAgent as SupportIcon,
 } from "@mui/icons-material";
-import { useNavigate, useLocation } from "react-router-dom";
+
+interface SidebarProps {
+  activePage: string;
+  onPageChange: (page: string) => void;
+}
 
 const drawerWidth = 240;
 
-const Sidebar = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const activePage = location.pathname.split("/")[1] || "services";
-
+const Sidebar: React.FC<SidebarProps> = ({ activePage, onPageChange }) => {
   const menuItems = [
     { text: "My Services", icon: <ServicesIcon />, page: "services", path: "/services" },
     { text: "Book a Service", icon: <BookIcon />, page: "book", path: "/book" },
@@ -52,7 +52,7 @@ const Sidebar = () => {
           <ListItem key={item.page} disablePadding>
             <ListItemButton
               selected={activePage === item.page}
-              onClick={() => navigate(item.path)}
+              onClick={() => onPageChange(item.page)}
               sx={{
                 "&.Mui-selected": {
                   backgroundColor: "rgba(255,255,255,0.2)",

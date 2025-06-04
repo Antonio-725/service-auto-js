@@ -65,4 +65,92 @@ const getUserServices = async (req, res) => {
   }
 };
 
-module.exports = { createService, getUserServices };
+const getAllServicedVehicles = async (req, res) => {
+  try {
+    const services = await Service.findAll({
+      include: [
+        {
+          model: Vehicle,
+          as: 'vehicle',
+          attributes: ['id', 'make', 'model', 'plate', 'year'],
+          include: [
+            {
+              model: User,
+              as: 'owner', // Alias for vehicle owner
+              attributes: ['id', 'username', 'phone', 'email'],
+            },
+          ],
+        },
+        {
+          model: User,
+          as: 'mechanic',
+          attributes: ['id', 'username'],
+          required: false,
+        },
+      ],
+      attributes: ['id', 'description', 'status', 'date', 'rating', 'createdAt'],
+    });
+
+    return res.status(200).json(services);
+  } catch (error) {
+    console.error('Error fetching serviced vehicles:', error.stack);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+const updateServiceAssignment = async (req, res) => {
+  const { serviceId } = req.params;
+  const { mechanicId, status } = req.body;
+
+  try {
+    if (!Service) {
+      console.error('Service model is not defined');
+      return res.status(500).json({ message: 'Server error: Service model not found' });
+    }
+
+    const service = await Service.findByPk(serviceId);
+    if (!service) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+
+    // Validate mechanic if provided
+    if (mechanicId) {
+      if (!User) {
+        console.error('User model is not defined');
+        return res.status(500).json({ message: 'Server error: User model not found' });
+      }
+      const mechanic = await User.findByPk(mechanicId);
+      if (!mechanic) {
+        return res.status(404).json({ message: 'Mechanic not found' });
+      }
+    }
+
+    // Validate status
+    const validStatuses = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status provided' });
+    }
+
+    // Update service
+    const updateData = {};
+    if (mechanicId) updateData.mechanicId = mechanicId;
+    if (status) updateData.status = status;
+
+    await service.update(updateData);
+
+    // Fetch updated service with associations
+    const updatedService = await Service.findByPk(serviceId, {
+      include: [
+        { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'plate', 'year'] },
+        { model: User, as: 'mechanic', attributes: ['id', 'username'], required: false },
+      ],
+    });
+
+    return res.status(200).json({ message: 'Service updated successfully', service: updatedService });
+  } catch (error) {
+    console.error('Error updating service:', error.stack);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+module.exports = { createService, getUserServices, getAllServicedVehicles, updateServiceAssignment };

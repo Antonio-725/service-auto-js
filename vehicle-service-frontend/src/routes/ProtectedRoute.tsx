@@ -21,10 +21,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/otp" replace />;
   }
 
-  if (userRole === "admin") {
-    // Admin should go to admin dashboard
-    return <Navigate to="/admin" replace />;
-  }
+  // if (userRole === "admin") {
+  //   // Admin should go to admin dashboard
+  //   return <Navigate to="/admin" replace />;
+  // }
+
+if (userRole === "admin") {
+  return <>{children}</>; // Allow admin access
+}
+
 
   if (userRole !== "client") {
     // Any other unauthorized role goes to login

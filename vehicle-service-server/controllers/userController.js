@@ -52,5 +52,22 @@ const updateProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+const getUsers = async (req, res) => {
+  try {
+    const { role } = req.query;
 
-module.exports = { getProfile, updateProfile };
+    const where = role ? { role } : {};
+
+    const users = await User.findAll({
+      where,
+      attributes: ['id', 'username', 'email', 'phone', 'role', 'createdAt']
+    });
+
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+module.exports = { getProfile, updateProfile,getUsers };

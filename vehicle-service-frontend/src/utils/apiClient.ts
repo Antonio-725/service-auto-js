@@ -30,7 +30,7 @@ export const login = async (email: string, password: string) => {
     throw new Error(errorMessage);
   }
 };
-// src/services/apiClient.ts
+
 
 export const registerUser = async (username: string, email: string, phone: string, password: string) => {
   try {
@@ -46,5 +46,16 @@ export const registerUser = async (username: string, email: string, phone: strin
     throw new Error(message);
   }
 };
+
+// Add response interceptor for consistent error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const errorMessage =
+      error.response?.data?.message || "An unexpected error occurred";
+    return Promise.reject(new Error(errorMessage));
+  }
+);
+
 
 export default apiClient;
