@@ -51,8 +51,8 @@ const BookServicePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const token = localStorage.getItem("token");
-  const userId = localStorage.getItem("userId");
+  const token = sessionStorage.getItem("token");
+  const userId = sessionStorage.getItem("userId");
 
   // Fetch vehicles
   useEffect(() => {
@@ -307,7 +307,7 @@ const BookServicePage = () => {
             <Button
               variant="contained"
               color="primary"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/")}
               sx={{ bgcolor: "#2a3e78", "&:hover": { bgcolor: "#1e2a5a" } }}
             >
               Back to Dashboard

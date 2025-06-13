@@ -143,3 +143,855 @@
   cursor: pointer;
   transition: background-color 0.2s;
 }
+.logoutButton {
+  padding: 0.5rem 1.25rem; /* Slightly more padding for a balanced look */
+  background-color: #e53e3e; /* Red background for logout to indicate action */
+  color: white; /* White text for contrast */
+  border: none; /* Remove default border */
+  border-radius: 0.5rem; /* Consistent rounded corners */
+  font-size: 0.875rem; /* Match other buttons */
+  font-weight: 500; /* Medium weight for readability */
+  cursor: pointer; /* Hand cursor on hover */
+  transition: all 0.2s ease-in-out; /* Smooth transition for hover/active */
+}
+
+.logoutButton:hover {
+  background-color: #c53030; /* Darker red on hover for feedback */
+  transform: translateY(-1px); /* Subtle lift effect */
+}
+
+.logoutButton:active {
+  background-color: #9b2c2c; /* Even darker red when clicked */
+  transform: translateY(0); /* Reset lift on click */
+}
+/* Filter container for layout */
+.filterContainer {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  align-items: center;
+}
+
+/* Style for filter labels */
+.filterLabel {
+  font-size: 0.875rem;
+  color: #1a202c;
+  margin-right: 0.5rem;
+  font-weight: 500;
+}
+
+/* Style for select dropdowns (status and priority) */
+.filterSelect {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  font-size: 0.875rem;
+  color: #1a202c;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s ease-in-out;
+}
+
+/* Hover effect for select dropdowns */
+.filterSelect:hover {
+  border-color: #93c5fd;
+}
+
+/* Focus effect for select dropdowns */
+.filterSelect:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+/* Style for search input */
+.searchInput {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  font-size: 0.875rem;
+  color: #1a202c;
+  width: 300px;
+  background-color: white;
+  transition: border-color 0.2s ease-in-out;
+}
+
+/* Hover effect for search input */
+.searchInput:hover {
+  border-color: #93c5fd;
+}
+
+/* Focus effect for search input */
+.searchInput:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+/* Container for the entire tab */
+.tabContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Metrics container for grid layout */
+.metricsContainer {
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Metric item styling */
+.metricItem {
+  width: 100%;
+}
+
+/* Header for metric title and value */
+.metricHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+/* Metric title */
+.metricTitle {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+/* Metric value */
+.metricValue {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1a202c;
+}
+
+/* Progress bar container */
+.progressBar {
+  width: 100%;
+  height: 0.5rem;
+  background-color: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+/* Progress bar fill */
+.progressFill {
+  height: 100%;
+  border-radius: 9999px;
+}
+
+/* Flex container for header with title and controls */
+.headerFlex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Container for report controls (month input and button) */
+.reportControls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Month input styling */
+.monthInput {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  font-size: 0.875rem;
+  color: #1a202c;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.monthInput:hover {
+  border-color: #93c5fd;
+}
+
+.monthInput:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+/* Content area for reports */
+.reportContent {
+  padding: 1.5rem;
+}
+
+/* List of generated reports */
+.reportList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Individual report item */
+.reportItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  font-size: 0.875rem;
+  color: #1a202c;
+}
+
+/* Empty state container */
+.emptyState {
+  text-align: center;
+  padding: 3rem 0;
+  color: #64748b;
+}
+
+/* Icon for empty state */
+.emptyIcon {
+  margin: 0 auto 1rem;
+  color: #cbd5e0;
+}
+
+/* Main text for empty state */
+.emptyText {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+/* Subtext for empty state */
+.emptySubtext {
+  font-size: 0.875rem;
+  margin: 0;
+}
+.lowStock {
+  color: red;
+  font-weight: bold;
+}
+
+.pagination {
+  margin-top: 1rem;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.pagination button {
+  padding: 6px 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.pagination button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Modern Professional UI Styles */
+
+/* Base Styles */
+.tabContent {
+  padding: 2rem;
+  background-color: #f9fafb;
+  min-height: calc(100vh - 4rem);
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Form Section */
+.formSection {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.formRow {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.inputField {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  background-color: #f9fafb;
+}
+
+.inputField:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.checkboxContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.checkboxContainer input {
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+}
+
+/* File Upload */
+.fileUpload {
+  flex: 1;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.fileInput {
+  display: none;
+}
+
+.fileLabel {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px dashed #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #f9fafb;
+}
+
+.fileLabel:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.uploadButton {
+  padding: 0 1rem;
+  background-color: #e5e7eb;
+  color: #4b5563;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.uploadButton:hover:not(:disabled) {
+  background-color: #d1d5db;
+}
+
+.uploadButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Form Actions */
+.formActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.saveButton {
+  padding: 0.5rem 1.25rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.saveButton:hover {
+  background-color: #2563eb;
+}
+
+.saveButton:disabled {
+  background-color: #93c5fd;
+  cursor: not-allowed;
+}
+
+.cancelButton {
+  padding: 0.5rem 1.25rem;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelButton:hover {
+  background-color: #e5e7eb;
+}
+
+/* Table Styles */
+.tableContainer {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dataTable thead {
+  background-color: #f9fafb;
+}
+
+.dataTable th {
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sortIndicator {
+  margin-left: 0.5rem;
+  color: #9ca3af;
+}
+
+.filterRow {
+  background-color: white;
+}
+
+.filterWrapper {
+  padding: 0.5rem 1rem;
+}
+
+.dataTable td {
+  padding: 1rem;
+  font-size: 0.875rem;
+  color: #111827;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dataTable tr:last-child td {
+  border-bottom: none;
+}
+
+.dataTable tr:hover td {
+  background-color: #f9fafb;
+}
+
+/* Cell Styles */
+.cellText {
+  font-weight: 500;
+}
+
+.priceCell {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
+.lowStock {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.inStock {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.criticalYes {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.criticalNo {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+/* Action Buttons */
+.actionButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.editButton {
+  padding: 0.375rem 0.75rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.editButton:hover {
+  background-color: #2563eb;
+}
+
+.deleteButton {
+  padding: 0.375rem 0.75rem;
+  background-color: #f43f5e;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deleteButton:hover {
+  background-color: #e11d48;
+}
+
+/* Filter Components */
+.filterInput {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  width: 100%;
+  background-color: #f9fafb;
+}
+
+.filterInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.rangeFilter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rangeInput {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  width: 100%;
+  background-color: #f9fafb;
+}
+
+.rangeSeparator {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.selectFilter {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  width: 100%;
+  background-color: #f9fafb;
+  cursor: pointer;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.pageButton {
+  padding: 0.5rem 0.75rem;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageButton:hover:not(:disabled) {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.pageButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Empty State */
+.noData {
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Loading and Error States */
+.loading {
+  padding: 2rem;
+  text-align: center;
+  color: #3b82f6;
+}
+
+.error {
+  padding: 2rem;
+  text-align: center;
+  color: #dc2626;
+}
+
+.errorContainer {
+  padding: 2rem;
+  text-align: center;
+}
+
+.errorContainer button {
+  padding: 0.5rem 1rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  margin-top: 1rem;
+  cursor: pointer;
+}
+
+  .animate-fade-in-out {
+    animation: fadeInOut 3s ease-in-out forwards;
+  }
+ 
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(-10px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
+  }
+  .imagePreviewContainer {
+  margin-top: 0.5rem;
+}
+
+.imagePreview {
+  max-width: 100%;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  border: 1px solid #cbd5e1;
+}
+.tableImage {
+  width: 50px; /* Increase from a smaller value, adjust as needed */
+  height: 50px;
+  object-fit: cover; /* Ensures image scales nicely without distortion */
+  cursor: pointer; /* Indicates the image is clickable */
+  border-radius: 4px; /* Optional: slight rounding for aesthetics */
+  transition: transform 0.2s ease; /* Smooth hover effect */
+}
+
+.tableImage:hover {
+  transform: scale(1.1); /* Slight zoom on hover for feedback */
+}
+
+.imageTableCell {
+  vertical-align: middle;
+}
+/* Modal styles */
+.imageModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8); /* Semi-transparent black background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.fullImage {
+  max-width: 100%;
+  max-height: 80vh; /* Limits height to 80% of viewport height */
+  object-fit: contain; /* Ensures full image is visible without distortion */
+  border-radius: 8px;
+}
+
+.closeButton {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 30px;
+  height: 30px;
+  background: #fff;
+  color: #000;
+  border: none;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.closeButton:hover {
+  background: #f0f0f0;
+}
+
+
+.deleteDialogOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.deleteDialogContent {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dialogTitle {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.dialogMessage {
+  margin-bottom: 20px;
+  color: #666;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cancelButton {
+  padding: 8px 16px;
+  background-color: #e0e0e0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.deleteButton {
+  padding: 8px 16px;
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tableContainer {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+}
+.table th, .table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+.table th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+.actionButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+.button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+.buttonSuccess {
+  background: #10b981;
+  color: white;
+}
+.buttonSuccess:hover {
+  background: #059669;
+}
+.buttonDanger {
+  background: #ef4444;
+  color: white;
+}
+.buttonDanger:hover {
+  background: #dc2626;
+}

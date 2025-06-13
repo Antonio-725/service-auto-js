@@ -1,7 +1,7 @@
-
-// //app.js
+//app.js
 const express = require("express");
 const app = express();
+const path = require("path");
 require("dotenv").config();
 
 // CORS Middleware
@@ -19,11 +19,18 @@ const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/userRoutes");
 const vehicleRoutes = require("./routes/vehicleRoutes");
 const serviceRoutes = require("./routes/serviceRoutes");
+const sparePartRoutes = require("./routes/sparePartRoutes");
+const sparePartRequestRoutes = require("./routes/sparePartRequestRoutes");
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/services", serviceRoutes);
+app.use("/api/spare-parts", sparePartRoutes);
+app.use("/api/spare-part-requests", sparePartRequestRoutes);
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Note: Database schema managed via migrations
 // const { sequelize } = require("./model");

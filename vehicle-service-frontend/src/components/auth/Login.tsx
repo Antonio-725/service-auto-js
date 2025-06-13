@@ -47,10 +47,16 @@ const Login = () => {
     const res = await login(email, password); // ✅ API call to backend
 
     // ✅ Save user data to localStorage
-    localStorage.setItem("token", res.token);
-    localStorage.setItem("role", res.role);
-    localStorage.setItem("userId", res.id);
-    localStorage.setItem("username", res.username); // 👈 Add username here
+
+    sessionStorage.setItem("token", res.token);
+    sessionStorage.setItem("role", res.role);
+    sessionStorage.setItem("userId", res.id);
+    sessionStorage.setItem("username", res.username);
+
+    // localStorage.setItem("token", res.token);
+    // localStorage.setItem("role", res.role);
+    // localStorage.setItem("userId", res.id);
+    // localStorage.setItem("username", res.username); // 👈 Add username here
     refreshAuthState(); // ✅ Refresh auth context
 
     switch (res.role) {

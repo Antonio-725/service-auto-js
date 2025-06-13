@@ -1,9 +1,8 @@
 {/* src/components/sidebar/Sidebar.tsx */}
 import React from 'react';
-import { BarChart3, Settings, FileText } from 'lucide-react';
+import { BarChart3, Settings, FileText, Package, Truck } from 'lucide-react';
 import styles from '../adminComponents/styles/styles.module.css';
 import type { LucideIcon } from 'lucide-react';
-
 
 // Types
 interface NavigationItem {
@@ -12,11 +11,12 @@ interface NavigationItem {
   icon: LucideIcon;
 }
 
-
 // Constants
 const NAV_ITEMS: NavigationItem[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
   { id: "services", label: "Service Requests", icon: Settings },
+  { id: "spare-parts", label: "Spare Parts", icon: Package },
+  { id: "spare-part-requests", label: "Spare Part Requests", icon: Truck },
   { id: "reports", label: "Reports", icon: FileText },
 ];
 
@@ -60,7 +60,7 @@ const Sidebar: React.FC<{
       <div className={styles.sidebarContent}>
         <ul className={styles.navList}>
           {NAV_ITEMS.map((item) => (
-            <NavItem 
+            <NavItem
               key={item.id}
               item={item}
               activeTab={activeTab}

@@ -28,6 +28,7 @@ import {
   Fade,
   Divider,
   CircularProgress,
+  Alert,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -66,7 +67,7 @@ interface Service {
   status: "In Progress" | "Completed" | "Cancelled";
   date: string;
   rating?: number;
-  mechanic?: Mechanic | null; // Updated to reflect API response
+  mechanic?: Mechanic | null;
 }
 
 const ServicesPage = () => {
@@ -85,10 +86,14 @@ const ServicesPage = () => {
     vehicles: false,
     currentServices: false,
     serviceHistory: false,
+    rating: false,
   });
   const [openRatingDialog, setOpenRatingDialog] = useState(false);
   const [selectedServiceToRate, setSelectedServiceToRate] = useState<string | null>(null);
   const [ratingValue, setRatingValue] = useState<number | null>(null);
+  const [ratingComment, setRatingComment] = useState<string>("");
+  const [ratingError, setRatingError] = useState<string | null>(null);
+  const [ratingSuccess, setRatingSuccess] = useState<string | null>(null);
   const [selectedVehicleDetails, setSelectedVehicleDetails] = useState<Vehicle | null>(null);
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
@@ -100,9 +105,9 @@ const ServicesPage = () => {
     plate: "",
   });
 
-  const token = localStorage.getItem("token");
-  const userId = localStorage.getItem("userId");
-  const username = localStorage.getItem("username") || "User";
+  const token = sessionStorage.getItem("token");
+  const userId = sessionStorage.getItem("userId");
+  const username = sessionStorage.getItem("username") || "User";
 
   // Fetch data
   useEffect(() => {
@@ -140,6 +145,7 @@ const ServicesPage = () => {
           vehicles: false,
           currentServices: false,
           serviceHistory: false,
+          rating: false,
         });
       }
     };
@@ -203,34 +209,55 @@ const ServicesPage = () => {
   const handleRateService = async () => {
     if (selectedServiceToRate && ratingValue !== null && token) {
       try {
+        setLoading((prev) => ({ ...prev, rating: true }));
+        setRatingError(null);
+        setRatingSuccess(null);
+        const payload = {
+          rating: ratingValue,
+          comment: ratingComment.trim() || undefined, // Include comment if provided
+        };
         await apiClient.patch(
           `/api/services/${selectedServiceToRate}/rate`,
-          { rating: ratingValue },
+          payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setServiceHistory((prev) =>
           prev.map((service) =>
-            service.id === selectedServiceToRate ? { ...service, rating: ratingValue } : service
+            service.id === selectedServiceToRate
+              ? { ...service, rating: ratingValue }
+              : service
           )
         );
-        setOpenRatingDialog(false);
-        setSelectedServiceToRate(null);
-        setRatingValue(null);
-      } catch (error) {
+        setRatingSuccess("Rating submitted successfully!");
+        setTimeout(() => {
+          setOpenRatingDialog(false);
+          setSelectedServiceToRate(null);
+          setRatingValue(null);
+          setRatingComment("");
+          setRatingSuccess(null);
+        }, 1500); // Close dialog after 1.5s to show success
+      } catch (error: any) {
         console.error("Error rating service:", error);
+        setRatingError(error.response?.data?.message || "Failed to submit rating. Please try again.");
+      } finally {
+        setLoading((prev) => ({ ...prev, rating: false }));
       }
     }
   };
 
   const handleOpenRatingDialog = (serviceId: string) => {
     setSelectedServiceToRate(serviceId);
+    setRatingValue(null);
+    setRatingComment("");
+    setRatingError(null);
+    setRatingSuccess(null);
     setOpenRatingDialog(true);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("username");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("userId");
+    sessionStorage.removeItem("username");
     navigate("/login");
   };
 
@@ -412,26 +439,64 @@ const ServicesPage = () => {
             </Dialog>
 
             {/* Rate Service Dialog */}
-            <Dialog open={openRatingDialog} onClose={() => setOpenRatingDialog(false)}>
-              <DialogTitle>Rate This Service</DialogTitle>
-              <DialogContent>
-                <Box display="flex" flexDirection="column" alignItems="center" p={2}>
+            <Dialog open={openRatingDialog} onClose={() => setOpenRatingDialog(false)} fullWidth maxWidth="sm">
+              <DialogTitle sx={{ bgcolor: "#2a3e78", color: "white", fontWeight: "bold" }}>
+                Rate This Service
+              </DialogTitle>
+              <DialogContent sx={{ pt: 3 }}>
+                <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
+                  <Typography variant="body1" color="text.secondary" textAlign="center">
+                    How would you rate this service?
+                  </Typography>
                   <Rating
                     value={ratingValue}
                     onChange={(event, newValue) => setRatingValue(newValue)}
                     size="large"
                     precision={1}
+                    sx={{ color: "#f59e0b" }}
                   />
+                  <TextField
+                    label="Optional Comment"
+                    fullWidth
+                    multiline
+                    rows={3}
+                    value={ratingComment}
+                    onChange={(e) => setRatingComment(e.target.value)}
+                    margin="normal"
+                    helperText="Share your feedback about the service (optional)"
+                  />
+                  {ratingError && (
+                    <Alert severity="error" sx={{ mt: 2, width: "100%" }}>
+                      {ratingError}
+                    </Alert>
+                  )}
+                  {ratingSuccess && (
+                    <Alert severity="success" sx={{ mt: 2, width: "100%" }}>
+                      {ratingSuccess}
+                    </Alert>
+                  )}
                 </Box>
               </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setOpenRatingDialog(false)}>Cancel</Button>
+              <DialogActions sx={{ p: 3 }}>
                 <Button
-                  onClick={handleRateService}
-                  disabled={ratingValue === null}
-                  color="primary"
+                  onClick={() => setOpenRatingDialog(false)}
+                  sx={{ textTransform: "none" }}
+                  disabled={loading.rating}
                 >
-                  Submit Rating
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleRateService}
+                  disabled={ratingValue === null || loading.rating}
+                  sx={{
+                    textTransform: "none",
+                    px: 3,
+                    bgcolor: "#2a3e78",
+                    "&:hover": { bgcolor: "#1e2a5a" },
+                  }}
+                >
+                  {loading.rating ? <CircularProgress size={24} color="inherit" /> : "Submit Rating"}
                 </Button>
               </DialogActions>
             </Dialog>
@@ -751,7 +816,7 @@ const ServicesPage = () => {
                                     <Star color="warning" sx={{ mr: 0.5 }} />
                                     <Typography>{service.rating}/5</Typography>
                                   </Box>
-                                ) : (
+                                ) : service.status === "Completed" ? (
                                   <Button
                                     variant="outlined"
                                     size="small"
@@ -762,11 +827,12 @@ const ServicesPage = () => {
                                       mr: 2,
                                       borderColor: "#2a3e78",
                                       color: "#2a3e78",
+                                      "&:hover": { bgcolor: "#e8eaf6" },
                                     }}
                                   >
                                     Rate Service
                                   </Button>
-                                )}
+                                ) : null}
                                 <Button
                                   variant="outlined"
                                   size="small"
@@ -775,6 +841,7 @@ const ServicesPage = () => {
                                     textTransform: "none",
                                     borderColor: "#2a3e78",
                                     color: "#2a3e78",
+                                    "&:hover": { bgcolor: "#e8eaf6" },
                                   }}
                                 >
                                   View Invoice

@@ -1,8 +1,10 @@
 {
   "info": {
+    "_postman_id": "cf24412e-7736-41ce-89e1-d12b36733441",
     "name": "AutoService APIs",
-    "description": "Test User Authentication, Profile, Vehicles, and Services APIs with automatic token saving.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "description": "Test User Authentication, Profile, Vehicles, Services, Spare Parts, and Spare Part Requests APIs with automatic token saving.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json", 
+    "_exporter_id": "32895476"
   },
   "item": [
     {
@@ -20,7 +22,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"0700000000\"\n}"
+              "raw": "{\"username\": \"willy\",\"email\": \"willy@gmail.com\",\"password\": \"1234\",\"phone\": \"0712345678\"}"
             },
             "url": {
               "raw": "http://localhost:5000/api/auth/register",
@@ -29,10 +31,27 @@
               "port": "5000",
               "path": ["api", "auth", "register"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.environment.set(\"token\", response.token);",
+                  "pm.environment.set(\"userId\", response.user.id);",
+                  "pm.test(\"Token saved\", function () {",
+                  "  pm.expect(response.token).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -43,7 +62,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+              "raw": "{\"email\": \"willy@gmail.com\",\"password\": \"1234\"}"
             },
             "url": {
               "raw": "http://localhost:5000/api/auth/login",
@@ -53,22 +72,7 @@
               "path": ["api", "auth", "login"]
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const response = pm.response.json();",
-                  "pm.environment.set(\"token\", response.token);",
-                  "pm.environment.set(\"userId\", response.user.id);",
-                  "pm.test(\"Token saved\", function () {",
-                  "    pm.expect(response.token).to.exist;",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ]
+          "response": []
         }
       ]
     },
@@ -82,8 +86,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "url": {
@@ -93,7 +96,8 @@
               "port": "5000",
               "path": ["api", "auth", "profile"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Get Current User (Users Route)",
@@ -102,8 +106,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "url": {
@@ -113,7 +116,8 @@
               "port": "5000",
               "path": ["api", "users", "me"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Update User Profile",
@@ -126,13 +130,12 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"updateduser\",\n  \"email\": \"updated@example.com\",\n  \"phone\": \"0700000001\",\n  \"address\": \"123 Updated St, Nairobi\",\n  \"notifications\": true,\n  \"twoFactorAuth\": false\n}"
+              "raw": "{\"username\": \"updateduser\",\"email\": \"updated@example.com\",\"phone\": \"0700000001\",\"address\": \"123 Updated St, Nairobi\",\"notifications\": true,\"twoFactorAuth\": false}"
             },
             "url": {
               "raw": "http://localhost:5000/api/users/{{userId}}",
@@ -141,7 +144,8 @@
               "port": "5000",
               "path": ["api", "users", "{{userId}}"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Change Password",
@@ -154,13 +158,12 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}"
+              "raw": "{\"currentPassword\": \"password123\",\"newPassword\": \"newpassword123\"}"
             },
             "url": {
               "raw": "http://localhost:5000/api/users/{{userId}}/password",
@@ -169,7 +172,8 @@
               "port": "5000",
               "path": ["api", "users", "{{userId}}", "password"]
             }
-          }
+          },
+          "response": []
         }
       ]
     },
@@ -178,6 +182,23 @@
       "item": [
         {
           "name": "Add New Vehicle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.vehicle && response.vehicle.id) {",
+                  "  pm.environment.set(\"vehicleId\", response.vehicle.id);",
+                  "  pm.test(\"Vehicle ID saved\", function () {",
+                  "    pm.expect(response.vehicle.id).to.exist;",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -187,13 +208,12 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"make\": \"Toyota\",\n  \"model\": \"Camry\",\n  \"year\": \"2020\",\n  \"plate\": \"ABC-1234\"\n}"
+              "raw": "{\"make\": \"Toyota\",\"model\": \"Camry\",\"year\": \"2020\",\"plate\": \"ABC-1234\"}"
             },
             "url": {
               "raw": "http://localhost:5000/api/vehicles",
@@ -202,7 +222,8 @@
               "port": "5000",
               "path": ["api", "vehicles"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Get User Vehicles",
@@ -211,8 +232,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "url": {
@@ -222,7 +242,8 @@
               "port": "5000",
               "path": ["api", "vehicles"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Get Vehicle Details",
@@ -231,8 +252,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "url": {
@@ -242,7 +262,8 @@
               "port": "5000",
               "path": ["api", "vehicles", "{{vehicleId}}"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Update Vehicle",
@@ -255,13 +276,12 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"make\": \"Updated Make\",\n  \"model\": \"Updated Model\",\n  \"year\": \"2021\",\n  \"plate\": \"XYZ-5678\"\n}"
+              "raw": "{\"make\": \"Updated Make\",\"model\": \"Updated Model\",\"year\": \"2021\",\"plate\": \"XYZ-5678\"}"
             },
             "url": {
               "raw": "http://localhost:5000/api/vehicles/{{vehicleId}}",
@@ -270,7 +290,8 @@
               "port": "5000",
               "path": ["api", "vehicles", "{{vehicleId}}"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Delete Vehicle",
@@ -279,8 +300,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "url": {
@@ -290,7 +310,8 @@
               "port": "5000",
               "path": ["api", "vehicles", "{{vehicleId}}"]
             }
-          }
+          },
+          "response": []
         }
       ]
     },
@@ -304,18 +325,18 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "url": {
-              "raw": "http://localhost:5000/api/services/current",
+              "raw": "http://localhost:5000/api/services",
               "protocol": "http",
               "host": ["localhost"],
               "port": "5000",
-              "path": ["api", "services", "current"]
+              "path": ["api", "services"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Get Service History",
@@ -324,8 +345,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "url": {
@@ -335,7 +355,8 @@
               "port": "5000",
               "path": ["api", "services", "history"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Request New Service",
@@ -348,13 +369,12 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"vehicleId\": \"{{vehicleId}}\",\n  \"serviceType\": \"Oil Change\",\n  \"description\": \"Full synthetic oil change\",\n  \"preferredDate\": \"2023-06-15\"\n}"
+              "raw": "{\"vehicleId\": \"{{vehicleId}}\",\"serviceType\": \"Oil Change\",\"description\": \"Full synthetic oil change\",\"preferredDate\": \"2023-06-15\"}"
             },
             "url": {
               "raw": "http://localhost:5000/api/services",
@@ -363,7 +383,8 @@
               "port": "5000",
               "path": ["api", "services"]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Rate Completed Service",
@@ -372,18 +393,16 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
+                "value": "Bearer {{token}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"rating\": 5\n}"
+              "raw": "{\"rating\": 5}"
             },
             "url": {
               "raw": "http://localhost:5000/api/services/{{serviceId}}/rate",
@@ -392,31 +411,262 @@
               "port": "5000",
               "path": ["api", "services", "{{serviceId}}", "rate"]
             }
-          }
+          },
+          "response": []
         }
       ]
-    }
-  ],
-  "variable": [
-    {
-      "key": "token",
-      "value": "",
-      "type": "string"
     },
     {
-      "key": "userId",
-      "value": "",
-      "type": "string"
+      "name": "Spare Parts",
+      "item": [
+        {
+          "name": "Get All Spare Parts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/spare-parts",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "spare-parts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Spare Part by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/spare-parts/{{sparePartId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "spare-parts", "{{sparePartId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Spare Part",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.sparePart && response.sparePart.id) {",
+                  "  pm.environment.set(\"sparePartId\", response.sparePart.id);",
+                  "  pm.test(\"Spare Part ID saved\", function () {",
+                  "    pm.expect(response.sparePart.id).to.exist;",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Oil Filter\",\"price\": 15.99,\"picture\": \"https://example.com/oil-filter.jpg\",\"quantity\":  100,\"criticalLevel\": false}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/spare-parts",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "spare-parts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Spare Part",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Updated Oil Filter\",\"price\": 18.99,\"picture\": \"https://example.com/updated-oil-filter.jpg\",\"quantity\":  80,\"criticalLevel\": true}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/spare-parts/{{sparePartId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "spare-parts", "{{sparePartId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Spare Part",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/spare-parts/{{sparePartId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "spare-parts", "{{sparePartId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Spare Part Quantity (Admin Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reduceBy\": 5}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/spare-parts/{{sparePartId}}/quantity",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "spare-parts", "{{sparePartId}}", "quantity"]
+            }
+          },
+          "response": []
+        }
+      ]
     },
     {
-      "key": "vehicleId",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "serviceId",
-      "value": "",
-      "type": "string"
+      "name": "Spare Part Requests",
+      "item": [
+        {
+          "name": "Create Spare Part Request (Mechanic)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.request && response.request.id) {",
+                  "  pm.environment.set(\"sparePartRequestId\", response.request.id);",
+                  "  pm.test(\"Spare Part Request ID saved\", function () {",
+                  "    pm.expect(response.request.id).to.exist;",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"sparePartId\": \"{{sparePartId}}\",\"vehicleId\": \"{{vehicleId}}\",\"mechanicId\": \"{{userId}}\",\"quantity\": 2}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/spare-part-requests",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "spare-part-requests"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Spare Part Requests (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/spare-part-requests",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "spare-part-requests"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Spare Part Request Status (Admin Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\": \"Approved\"}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/spare-part-requests/{{sparePartRequestId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "spare-part-requests", "{{sparePartRequestId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

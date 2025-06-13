@@ -27,7 +27,7 @@ interface Vehicle {
 interface Mechanic {
   id: string;
   username: string;
-  phone: string; // Added phone field
+  phone: string;
 }
 
 interface Service {
@@ -58,6 +58,7 @@ const ServiceRequestsTable: React.FC<ServiceRequestsTableProps> = ({
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null);
   const [selectedMechanics, setSelectedMechanics] = useState<{ [key: string]: string | null }>({});
   const [selectedStatuses, setSelectedStatuses] = useState<{ [key: string]: string }>({});
+  const [isAssigning, setIsAssigning] = useState<{ [key: string]: boolean }>({}); // Track loading state per request
 
   const getStatusStyle = (status: string) => {
     const baseStyle = {
@@ -139,13 +140,32 @@ const ServiceRequestsTable: React.FC<ServiceRequestsTableProps> = ({
     setSelectedStatuses(prev => ({ ...prev, [requestId]: status }));
   };
 
-  const handleAssign = (requestId: string) => {
+  const handleAssign = async (requestId: string) => {
     const mechanicId = selectedMechanics[requestId] || null;
     const status = selectedStatuses[requestId] 
-  ?? requests.find(req => req.id === requestId)?.status 
-  ?? "Pending"; // fallback default
-    // const status = selectedStatuses[requestId] || requests.find(req => req.id === requestId)?.status;
-    // onAssign(requestId, mechanicId, status);
+      ?? requests.find(req => req.id === requestId)?.status 
+      ?? "Pending";
+    
+    // Prevent action if no changes
+    const currentRequest = requests.find(req => req.id === requestId);
+    if (
+      currentRequest?.mechanic?.id === mechanicId &&
+      currentRequest?.status === status
+    ) {
+      return; // No changes to apply
+    }
+
+    setIsAssigning(prev => ({ ...prev, [requestId]: true }));
+    try {
+      await onAssign(requestId, mechanicId, status);
+      // Clear selections after successful assign
+      setSelectedMechanics(prev => ({ ...prev, [requestId]: null }));
+      setSelectedStatuses(prev => ({ ...prev, [requestId]: status }));
+    } catch (error) {
+      console.error("Assignment failed:", error);
+    } finally {
+      setIsAssigning(prev => ({ ...prev, [requestId]: false }));
+    }
   };
 
   // Prepare data for mechanic-centric table
@@ -428,34 +448,37 @@ const ServiceRequestsTable: React.FC<ServiceRequestsTableProps> = ({
                     <button 
                       style={{
                         padding: '0.5rem 1rem',
-                        backgroundColor: '#2563eb',
+                        backgroundColor: isAssigning[request.id] ? '#93c5fd' : '#2563eb',
                         color: 'white',
                         border: 'none',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
                         fontWeight: '500',
-                        cursor: 'pointer',
+                        cursor: isAssigning[request.id] ? 'not-allowed' : 'pointer',
                         transition: 'background-color 0.2s',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.25rem'
                       }}
-
                       onMouseEnter={(e) => {
-               const target = e.currentTarget as HTMLButtonElement;
-                  target.style.backgroundColor = '#1d4ed8';
-                  }}
-                   onMouseLeave={(e) => {
-                  const target = e.currentTarget as HTMLButtonElement;
-                target.style.backgroundColor = '#2563eb';
-          }}
-
+                        if (!isAssigning[request.id]) {
+                          const target = e.currentTarget as HTMLButtonElement;
+                          target.style.backgroundColor = '#1d4ed8';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isAssigning[request.id]) {
+                          const target = e.currentTarget as HTMLButtonElement;
+                          target.style.backgroundColor = '#2563eb';
+                        }
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAssign(request.id);
                       }}
+                      disabled={isAssigning[request.id]}
                     >
-                      <span>Assign</span>
+                      <span>{isAssigning[request.id] ? 'Assigning...' : 'Assign'}</span>
                       <ChevronDown size={16} />
                     </button>
                   </div>

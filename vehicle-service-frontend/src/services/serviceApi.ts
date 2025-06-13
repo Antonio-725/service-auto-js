@@ -36,3 +36,13 @@ export const updateService = async (serviceId: string, updates: {
 };
 
 
+export const fetchAssignedServices = async () => {
+  try {
+    const response = await apiClient.get("/api/services/mechanic");
+    return response.data;
+  } catch (error: any) {
+    const errorMessage =
+      error.response?.data?.message || "Failed to fetch assigned services";
+    throw new Error(errorMessage);
+  }
+};

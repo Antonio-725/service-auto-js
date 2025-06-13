@@ -1,17 +1,15 @@
-/* src/dashboards/AdminDashboard.tsx */
 import React, { useState, useEffect } from 'react';
-//import { Calendar } from 'lucide-react';
-
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import { Calendar, Settings, Clock, Wrench, CheckCircle, TrendingUp } from 'lucide-react';
-
 import Sidebar from '../components/adminComponents/Sidebar';
-import OverviewTab from '../components/adminComponents//OverviewTab';
+import OverviewTab from '../components/adminComponents/OverviewTab';
 import ServicesTab from '../components/adminComponents/ServicesTab';
 import ReportsTab from '../components/adminComponents/ReportsTab';
+import SparePartsTab from '../components/adminComponents/SparePartsTab';
+import SparePartRequestsTab from '../components/adminComponents/SparePartRequestsTab';
 import { fetchServices, fetchMechanics, updateService } from '../services/serviceApi';
+import { logout } from '../utils/apiClient';
 import styles from '../components/adminComponents/styles/styles.module.css';
-
 
 // Register Chart.js components
 ChartJS.register(
@@ -53,18 +51,14 @@ interface ServiceRequest {
       email: string;
     };
   };
-   mechanic: { id: string; username: string; phone:string} | null;
-  // mechanic: {
-  //   id: string;
-  //   username: string;
-  // } | null;
+  mechanic: { id: string; username: string; phone: string } | null;
   priority?: string;
 }
 
 interface Mechanic {
   id: string;
   username: string;
-   phone: string;
+  phone: string;
 }
 
 const AdminDashboard = () => {
@@ -178,6 +172,10 @@ const AdminDashboard = () => {
     ];
   };
 
+  const handleLogout = () => {
+    logout(); // Clear localStorage and redirect to /login
+  };
+
   if (loading) return <div className={styles.container}>Loading...</div>;
   if (error) return <div className={styles.container}>Error: {error}</div>;
 
@@ -194,6 +192,9 @@ const AdminDashboard = () => {
             <span>{new Date().toLocaleDateString()}</span>
           </div>
           <div className={styles.avatar}></div>
+          <button onClick={handleLogout} className={styles.logoutButton} aria-label="Log out of admin dashboard">
+            Logout
+          </button>
         </div>
       </header>
 
@@ -215,6 +216,8 @@ const AdminDashboard = () => {
             onAssign={handleAssign}
           />}
 
+          {activeTab === "spare-parts" && <SparePartsTab />}
+          {activeTab === "spare-part-requests" && <SparePartRequestsTab />}
           {activeTab === "reports" && <ReportsTab />}
         </main>
       </div>

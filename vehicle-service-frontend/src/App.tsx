@@ -15,6 +15,8 @@ import SupportPage from "./pages/client/SupportPage";
 // Admin Dashboard (Example)
 import AdminDashboard from "./dashboards/AdminDashboard"; // Make sure this exists
 
+import MechanicDashboard from "./dashboards/MechanicDashboard";
+
 // Protected Route
 import ProtectedRoute from "./routes/ProtectedRoute";
 
@@ -36,6 +38,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/mechanic"
+  element={
+    <ProtectedRoute>
+      <MechanicDashboard />
+    </ProtectedRoute>
+  }
+/>
 
         {/* Protected Client Dashboard */}
         <Route

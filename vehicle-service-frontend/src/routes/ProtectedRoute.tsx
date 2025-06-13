@@ -1,6 +1,7 @@
 // src/routes/ProtectedRoute.tsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { verifyToken } from "../utils/apiClient";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,35 +9,55 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
-  const token = localStorage.getItem("token");
-  const userRole = localStorage.getItem("role");
+  const token = sessionStorage.getItem("token");
+  const userRole = sessionStorage.getItem("role");
+  const [isValid, setIsValid] = useState<boolean | null>(null);
 
-  if (!token) {
-    // Not logged in
+  useEffect(() => {
+    const checkToken = async () => {
+      if (!token) {
+        setIsValid(false);
+        return;
+      }
+      try {
+        await verifyToken(); // Verify token with backend
+        setIsValid(true);
+      } catch (error) {
+        setIsValid(false); // Token invalid or expired
+      }
+    };
+    checkToken();
+  }, [token]);
+
+  if (isValid === null) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isValid || !token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (userRole === "user") {
-    // OTP verification required
-    return <Navigate to="/otp" replace />;
-  }
+  if (userRole === "mechanic") {
+  return <Navigate to="/otp" replace />;
+}
 
-  // if (userRole === "admin") {
-  //   // Admin should go to admin dashboard
-  //   return <Navigate to="/admin" replace />;
-  // }
-
-if (userRole === "admin") {
-  return <>{children}</>; // Allow admin access
+if (userRole === "mechanic_verified") {
+  return <>{children}</>;
 }
 
 
+  if (userRole === "user") {
+    return <Navigate to="/otp" replace />;
+  }
+
+  if (userRole === "admin") {
+    return <>{children}</>;
+  }
+
   if (userRole !== "client") {
-    // Any other unauthorized role goes to login
     return <Navigate to="/login" replace />;
   }
 
-  // Only allow access if role is "client"
   return <>{children}</>;
 };
 

@@ -54,7 +54,7 @@ const ProfilePage = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       if (!token) {
         navigate("/login");
         return;
@@ -90,7 +90,7 @@ const ProfilePage = () => {
   };
 
   const handleSave = async () => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     if (!token) {
       navigate("/login");
       return;

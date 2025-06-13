@@ -153,4 +153,47 @@ const updateServiceAssignment = async (req, res) => {
   }
 };
 
-module.exports = { createService, getUserServices, getAllServicedVehicles, updateServiceAssignment };
+const getAssignedServicesToMechanic = async (req, res) => {
+  const mechanicId = req.user.id;
+
+  try {
+    // Ensure models are defined
+    if (!Service || !Vehicle || !User) {
+      console.error('One or more models not defined:', { Service, Vehicle, User });
+      return res.status(500).json({ message: 'Server error: Models not loaded' });
+    }
+
+    // Fetch services where this user is the assigned mechanic
+    const services = await Service.findAll({
+      where: { mechanicId },
+      include: [
+        {
+          model: Vehicle,
+          as: 'vehicle',
+          attributes: ['id', 'make', 'model', 'plate', 'year'],
+          include: [
+            {
+              model: User,
+              as: 'owner', // This should match your association
+              attributes: ['id', 'username', 'phone', 'email'],
+            },
+          ],
+        },
+        {
+          model: User,
+          as: 'mechanic',
+          attributes: ['id', 'username'],
+        },
+      ],
+      attributes: ['id', 'description', 'status', 'date', 'rating', 'createdAt'],
+    });
+
+    return res.status(200).json(services);
+  } catch (error) {
+    console.error('Error fetching assigned services:', error.stack);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+
+module.exports = { createService, getUserServices, getAllServicedVehicles, updateServiceAssignment,getAssignedServicesToMechanic };
