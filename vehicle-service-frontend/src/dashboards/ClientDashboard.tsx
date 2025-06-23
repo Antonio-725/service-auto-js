@@ -10,26 +10,46 @@ import {
   Container,
   IconButton,
   Badge,
-  Avatar
+  Avatar,
+  Tooltip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText
 } from "@mui/material";
 import {
   Notifications as NotificationsIcon,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  ExitToApp as ExitToAppIcon
 } from "@mui/icons-material";
 import Sidebar from "../components/Sidebar";
 
 const DashboardLayout = () => {
   const [activePage, setActivePage] = useState("services");
+  const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
 
-  // const handlePageChange = (page: string) => {
-  //   setActivePage(page);
-  //   navigate(`/dashboard/${page}`);
-  // };
+  const username = sessionStorage.getItem("username") || "User";
+
   const handlePageChange = (page: string) => {
-  setActivePage(page);
-  navigate(`/${page}`); // Navigate to /services, /book, etc.
-};
+    setActivePage(page);
+    navigate(`/${page}`);
+  };
+
+  const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorElUser(event.currentTarget);
+  };
+
+  const handleCloseUserMenu = () => {
+    setAnchorElUser(null);
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("userId");
+    sessionStorage.removeItem("username");
+    navigate("/login");
+  };
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -51,15 +71,41 @@ const DashboardLayout = () => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
-            {activePage.charAt(0).toUpperCase() + activePage.slice(1).replace(/([A-Z])/g, ' $1')}
+          <Typography variant="h6" noWrap sx={{ flexGrow: 1, fontWeight: "bold" }}>
+            AutoCare Hub
           </Typography>
-          <IconButton color="inherit">
-            <Badge badgeContent={4} color="error">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
-          <Avatar sx={{ ml: 2, bgcolor: "#4caf50" }}>U</Avatar>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Typography variant="body1" sx={{ mr: 2 }}>
+              Welcome, {username}!
+            </Typography>
+            <IconButton color="inherit">
+              <Badge badgeContent={4} color="error">
+                <NotificationsIcon />
+              </Badge>
+            </IconButton>
+            <Tooltip title="Account settings">
+              <IconButton onClick={handleOpenUserMenu} sx={{ ml: 2 }}>
+                <Avatar sx={{ bgcolor: "#2a3e78" }}>
+                  {username.charAt(0).toUpperCase()}
+                </Avatar>
+              </IconButton>
+            </Tooltip>
+            <Menu
+              anchorEl={anchorElUser}
+              open={Boolean(anchorElUser)}
+              onClose={handleCloseUserMenu}
+              sx={{ mt: "45px" }}
+              anchorOrigin={{ vertical: "top", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+              <MenuItem onClick={handleLogout}>
+                <ListItemIcon>
+                  <ExitToAppIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Logout</ListItemText>
+              </MenuItem>
+            </Menu>
+          </Box>
         </Toolbar>
       </AppBar>
       <Sidebar activePage={activePage} onPageChange={handlePageChange} />
@@ -80,6 +126,5 @@ const DashboardLayout = () => {
     </Box>
   );
 };
-
 
 export default DashboardLayout;

@@ -14,9 +14,10 @@ interface NavigationItem {
 // Constants
 const NAV_ITEMS: NavigationItem[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
-  { id: "services", label: "Service Requests", icon: Settings },
+  { id: "services", label: "Mechanics", icon: Settings },
   { id: "spare-parts", label: "Spare Parts", icon: Package },
   { id: "spare-part-requests", label: "Spare Part Requests", icon: Truck },
+  { id: "invoices", label: "Invoices", icon: Truck },
   { id: "reports", label: "Reports", icon: FileText },
 ];
 

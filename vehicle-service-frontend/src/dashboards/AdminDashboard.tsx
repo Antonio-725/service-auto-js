@@ -8,7 +8,8 @@ import ReportsTab from '../components/adminComponents/ReportsTab';
 import SparePartsTab from '../components/adminComponents/SparePartsTab';
 import SparePartRequestsTab from '../components/adminComponents/SparePartRequestsTab';
 import { fetchServices, fetchMechanics, updateService } from '../services/serviceApi';
-import { logout } from '../utils/apiClient';
+import InvoicesTab from '../components/adminComponents/InvoicesTab';
+import { getInvoices, logout } from '../utils/apiClient';
 import styles from '../components/adminComponents/styles/styles.module.css';
 
 // Register Chart.js components
@@ -55,6 +56,40 @@ interface ServiceRequest {
   priority?: string;
 }
 
+interface InvoiceResponse {
+  id: string;
+  serviceId: string;
+  vehicleId: string;
+  userId: string;
+  items: { description: string; quantity: number; unitPrice: number; total: number }[];
+  laborCost: number;
+  partsCost: number;
+  tax: number;
+  totalAmount: number;
+  status: "Draft" | "Sent" | "Paid" | "Overdue";
+  sentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  service?: {
+    id: string;
+    description: string;
+    status: string;
+    date: string;
+  };
+  vehicle?: {
+    id: string;
+    make: string;
+    model: string;
+    year: string;
+    plate: string;
+  };
+  user?: {
+    id: string;
+    username: string;
+    email: string;
+  };
+}
+
 interface Mechanic {
   id: string;
   username: string;
@@ -64,6 +99,7 @@ interface Mechanic {
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceResponse[]>([]);
   const [mechanics, setMechanics] = useState<Mechanic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,12 +108,14 @@ const AdminDashboard = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [servicesData, mechanicsData] = await Promise.all([
+        const [servicesData, mechanicsData, invoicesData] = await Promise.all([
           fetchServices(),
-          fetchMechanics()
+          fetchMechanics(),
+          getInvoices(), // Fetch all invoices
         ]);
         setServiceRequests(servicesData);
         setMechanics(mechanicsData);
+        setInvoices(invoicesData);
         setError(null);
       } catch (err: any) {
         setError(err.message);
@@ -124,14 +162,23 @@ const AdminDashboard = () => {
   const calculateStats = (): StatCard[] => {
     const statusCounts = getStatusCounts();
     const today = new Date().toISOString().split('T')[0];
+
+    // Filter paid invoices for today
+    const paidInvoicesToday = invoices.filter(
+      invoice => invoice.status === 'Paid' && invoice.updatedAt.split('T')[0] === today
+    );
+
+    // Calculate total revenue from paid invoices
+    const totalRevenue = paidInvoicesToday.reduce(
+      (sum, invoice) => sum + (Number(invoice.totalAmount) || 0),
+      0
+    );
+
     const completedToday = serviceRequests.filter(
       req => req.status === 'Completed' && req.date.split('T')[0] === today
     ).length;
 
     const totalServices = serviceRequests.length;
-    const totalRevenue = serviceRequests
-      .filter(req => req.status === 'Completed')
-      .reduce((sum, req) => sum + (req.rating ? req.rating * 100 : 0), 0);
 
     return [
       { 
@@ -163,7 +210,7 @@ const AdminDashboard = () => {
         color: "green" 
       },
       { 
-        title: "Revenue", 
+        title: "Revenue (Today)", 
         value: `$${totalRevenue.toLocaleString()}`, 
         change: "0%", 
         icon: TrendingUp, 
@@ -217,6 +264,8 @@ const AdminDashboard = () => {
           />}
 
           {activeTab === "spare-parts" && <SparePartsTab />}
+           
+          {activeTab === "invoices" && <InvoicesTab />}
           {activeTab === "spare-part-requests" && <SparePartRequestsTab />}
           {activeTab === "reports" && <ReportsTab />}
         </main>

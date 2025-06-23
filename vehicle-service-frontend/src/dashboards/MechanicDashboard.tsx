@@ -12,10 +12,9 @@ import { ThemeProvider, createTheme, useTheme } from '@mui/material/styles';
 import ServiceRequestsTable from "../components/ServiceRequestsTable";
 import SparePartsTable from "../components/mechanicComponents/SparePartsTable";
 import TaskHistoryTable from "../components/mechanicComponents/TaskHistoryTable";
-import { fetchAssignedServices, updateService, fetchServices } from "../services/serviceApi";
+import { fetchAssignedServices, updateService } from "../services/serviceApi";
 import { fetchSpareParts, createSparePartRequest } from "../services/sparePartApi";
 import { fetchRecentRequestsByMechanic } from "../services/sparePartApi";
-
 import { useSnackbar } from 'notistack';
 import {
   Chart as ChartJS,
@@ -31,7 +30,6 @@ import { Pie, Bar } from 'react-chartjs-2';
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/mechanicComponents/Sidebar";
 import { deepPurple, teal, orange, blueGrey } from '@mui/material/colors';
-
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -112,6 +110,7 @@ const theme = createTheme({
         root: {
           borderRadius: 12,
           textTransform: 'none',
+          fontSize: 14,
           fontWeight: 500,
           padding: '8px 16px',
         },
@@ -157,6 +156,7 @@ interface SelectedPart {
   id: string;
   quantity: number;
 }
+
 interface SparePartRequest {
   id: string;
   sparePartId: string;
@@ -165,7 +165,7 @@ interface SparePartRequest {
   quantity: number;
   totalPrice?: number;
   status: 'Pending' | 'Approved' | 'Rejected';
-  createdAt: string; // ISO date string
+  createdAt: string;
 }
 
 const MechanicDashboard = () => {
@@ -201,8 +201,18 @@ const MechanicDashboard = () => {
         const serviceData = await fetchAssignedServices();
         if (Array.isArray(serviceData)) {
           setRequests(serviceData);
+          // Filter vehicles based on assigned services with status "In Progress"
+          const assignedVehicles = serviceData
+            .filter((service: any) => service.vehicle && service.status === "In Progress")
+            .map((service: any) => service.vehicle)
+            .filter((vehicle: Vehicle, index: number, self: Vehicle[]) =>
+              index === self.findIndex((v) => v.id === vehicle.id)
+            );
+          setVehicles(assignedVehicles);
+          console.log('Loaded vehicles:', assignedVehicles); // Debug log
         } else {
           setRequests([]);
+          setVehicles([]);
         }
 
         // Fetch spare parts
@@ -217,13 +227,6 @@ const MechanicDashboard = () => {
           criticalLevel: Boolean(part.criticalLevel),
         }));
         setSpareParts(sanitizedParts);
-
-        // Fetch vehicles
-        const servicesData = await fetchServices();
-        const uniqueVehicles = Array.isArray(servicesData)
-          ? [...new Map(servicesData.map((item: any) => [item.vehicle.id, item.vehicle])).values()]
-          : [];
-        setVehicles(uniqueVehicles);
       } catch (error) {
         setRequests([]);
         setSpareParts([]);
@@ -292,63 +295,61 @@ const MechanicDashboard = () => {
     setOpenConfirmDialog(true);
   };
 
- 
   // Submit requests
-const handleSubmitForApproval = async () => {
-  try {
-    const mechanicId = sessionStorage.getItem("userId");
-    if (!mechanicId) {
-      enqueueSnackbar("User not authenticated", { variant: 'error' });
-      return;
+  const handleSubmitForApproval = async () => {
+    try {
+      const mechanicId = sessionStorage.getItem("userId");
+      if (!mechanicId) {
+        enqueueSnackbar("User not authenticated", { variant: 'error' });
+        return;
+      }
+
+      // Create requests
+      for (const p of selectedParts) {
+        const part = spareParts.find((sp) => sp.id === p.id);
+        const totalPrice = (part?.price || 0) * p.quantity;
+        console.log('Submitting request for part:', {
+          sparePartId: p.id,
+          vehicleId: selectedVehicle,
+          mechanicId,
+          quantity: p.quantity,
+          totalPrice,
+        });
+        await createSparePartRequest({
+          sparePartId: p.id,
+          vehicleId: selectedVehicle,
+          mechanicId,
+          quantity: p.quantity,
+          totalPrice,
+        });
+        console.log(`Request submitted for part ${p.id}`);
+      }
+
+      // Update frontend state
+      setSelectedParts([]);
+      setSelectedVehicle('');
+      setOpenConfirmDialog(false);
+      enqueueSnackbar("Spare parts request submitted for admin approval", { variant: 'success' });
+
+      // Refresh spare parts to reflect any changes
+      const partsData = await fetchSpareParts();
+      const sanitizedParts = partsData.map((part: Partial<SparePart>) => ({
+        ...part,
+        id: part.id || '',
+        name: part.name || '',
+        price: typeof part.price === 'number' ? part.price : null,
+        quantity: typeof part.quantity === 'number' ? part.quantity : 0,
+        picture: part.picture || '',
+        criticalLevel: Boolean(part.criticalLevel),
+      }));
+      setSpareParts(sanitizedParts);
+    } catch (error: any) {
+      console.error('Error submitting spare part request:', error);
+      enqueueSnackbar(error.message || "Failed to submit request", { variant: 'error' });
+      setOpenConfirmDialog(false);
     }
+  };
 
-    // Create requests
-    for (const p of selectedParts) {
-      const part = spareParts.find((sp) => sp.id === p.id);
-      const totalPrice = (part?.price || 0) * p.quantity;
-      console.log('Submitting request for part:', {
-        sparePartId: p.id,
-        vehicleId: selectedVehicle,
-        mechanicId,
-        quantity: p.quantity,
-        totalPrice,
-      });
-      await createSparePartRequest({
-        sparePartId: p.id,
-        vehicleId: selectedVehicle,
-        mechanicId,
-        quantity: p.quantity,
-        totalPrice,
-      });
-      console.log(`Request submitted for part ${p.id}`);
-    }
-
-    // Update frontend state
-    setSelectedParts([]);
-    setSelectedVehicle('');
-    setOpenConfirmDialog(false);
-    enqueueSnackbar("Spare parts request submitted for admin approval", { variant: 'success' });
-
-    // Refresh spare parts to reflect any changes
-    const partsData = await fetchSpareParts();
-    const sanitizedParts = partsData.map((part: Partial<SparePart>) => ({
-      ...part,
-      id: part.id || '',
-      name: part.name || '',
-      price: typeof part.price === 'number' ? part.price : null,
-      quantity: typeof part.quantity === 'number' ? part.quantity : 0,
-      picture: part.picture || '',
-      criticalLevel: Boolean(part.criticalLevel),
-    }));
-    setSpareParts(sanitizedParts);
-  } catch (error: any) {
-    console.error('Error submitting spare part request:', error);
-    enqueueSnackbar(error.message || "Failed to submit request", { variant: 'error' });
-    setOpenConfirmDialog(false);
-  }
-};
-
-  
   // Calculate total price
   const calculateTotalPrice = () => {
     return selectedParts.reduce((total, p) => {
@@ -392,27 +393,26 @@ const handleSubmitForApproval = async () => {
     }
   };
 
+  const [recentRequests, setRecentRequests] = useState<SparePartRequest[]>([]);
+  const [loadingRecent, setLoadingRecent] = useState(true);
 
-const [recentRequests, setRecentRequests] = useState<SparePartRequest[]>([]);
-const [loadingRecent, setLoadingRecent] = useState(true);
+  useEffect(() => {
+    const loadRecentRequests = async () => {
+      const mechanicId = sessionStorage.getItem("userId");
+      if (!mechanicId) return;
 
-useEffect(() => {
-  const loadRecentRequests = async () => {
-    const mechanicId = sessionStorage.getItem("userId");
-    if (!mechanicId) return;
+      try {
+        const data = await fetchRecentRequestsByMechanic(mechanicId);
+        setRecentRequests(data.slice(0, 5)); // Show last 5
+      } catch (err: any) {
+        enqueueSnackbar(err.message || "Failed to load recent requests", { variant: 'error' });
+      } finally {
+        setLoadingRecent(false);
+      }
+    };
 
-    try {
-      const data = await fetchRecentRequestsByMechanic(mechanicId);
-      setRecentRequests(data.slice(0, 5)); // Show last 5
-    } catch (err: any) {
-      enqueueSnackbar(err.message || "Failed to load recent requests", { variant: 'error' });
-    } finally {
-      setLoadingRecent(false);
-    }
-  };
-
-  loadRecentRequests();
-}, []);
+    loadRecentRequests();
+  }, []);
 
   // Pie chart data
   const pieChartData = {
@@ -445,7 +445,6 @@ useEffect(() => {
       },
     ],
   };
-
 
   const renderDashboard = () => (
     <Grid container spacing={3}>
@@ -628,17 +627,24 @@ useEffect(() => {
             <Select
               labelId="vehicle-select-label"
               value={selectedVehicle}
-              onChange={(e) => setSelectedVehicle(e.target.value)}
+              onChange={(e) => {
+                console.log('Selected vehicle:', e.target.value); // Debug log
+                setSelectedVehicle(e.target.value as string);
+              }}
               label="Select Vehicle"
+              disabled={vehicles.length === 0}
             >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {vehicles.map((vehicle) => (
-                <MenuItem key={vehicle.id} value={vehicle.id}>
-                  {vehicle.make} {vehicle.model} ({vehicle.plate})
+              {vehicles.length === 0 ? (
+                <MenuItem value="" disabled>
+                  No vehicles assigned
                 </MenuItem>
-              ))}
+              ) : (
+                vehicles.map((vehicle) => (
+                  <MenuItem key={vehicle.id} value={vehicle.id}>
+                    {vehicle.make} {vehicle.model} ({vehicle.plate})
+                  </MenuItem>
+                ))
+              )}
             </Select>
           </FormControl>
           <Button
@@ -651,9 +657,9 @@ useEffect(() => {
           </Button>
         </Box>
         {/* Recent Requests Card */}
-<Box mt={4}>
-  <RecentSparePartRequestsCard requests={recentRequests} loading={loadingRecent} />
-</Box>
+        <Box mt={4}>
+          <RecentSparePartRequestsCard requests={recentRequests} loading={loadingRecent} />
+        </Box>
 
         {/* Confirmation Dialog */}
         <Dialog

@@ -21,6 +21,7 @@ const vehicleRoutes = require("./routes/vehicleRoutes");
 const serviceRoutes = require("./routes/serviceRoutes");
 const sparePartRoutes = require("./routes/sparePartRoutes");
 const sparePartRequestRoutes = require("./routes/sparePartRequestRoutes");
+const invoiceRoutes = require('./routes/invoices');
 
 
 app.use("/api/auth", authRoutes);
@@ -29,6 +30,7 @@ app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/spare-parts", sparePartRoutes);
 app.use("/api/spare-part-requests", sparePartRequestRoutes);
+app.use('/api/invoices', invoiceRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

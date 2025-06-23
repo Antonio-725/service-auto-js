@@ -11,6 +11,8 @@ import PaymentsPage from "./pages/client/PaymentsPage";
 import NotificationsPage from "./pages/client/NotificationsPage";
 import ProfilePage from "./pages/client/ProfilePage";
 import SupportPage from "./pages/client/SupportPage";
+import InvoiceView from './components/InvoiceView';
+
 
 // Admin Dashboard (Example)
 import AdminDashboard from "./dashboards/AdminDashboard"; // Make sure this exists
@@ -55,6 +57,11 @@ function App() {
             </ProtectedRoute>
           }
         >
+        <Route path="/invoices/:id" element={
+  <ProtectedRoute>
+    <InvoiceView />
+  </ProtectedRoute>
+} />
           <Route index element={<ServicesPage />} />
           <Route path="services" element={<ServicesPage />} />
           <Route path="book" element={<BookServicePage />} />

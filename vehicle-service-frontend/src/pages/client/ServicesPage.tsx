@@ -29,6 +29,12 @@ import {
   Divider,
   CircularProgress,
   Alert,
+  Snackbar,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -44,7 +50,16 @@ import {
   CheckCircle,
   CalendarToday,
 } from "@mui/icons-material";
-import apiClient from "../../utils/apiClient";
+import {
+  getVehicles,
+  getVehicleById,
+  addVehicle,
+  updateVehicle,
+  deleteVehicle,
+  getServices,
+  rateService,
+  getInvoices,
+} from "../../utils/apiClient";
 
 interface Vehicle {
   id: string;
@@ -59,6 +74,29 @@ interface Mechanic {
   username: string;
 }
 
+interface InvoiceItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+interface Invoice {
+  id: string;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+  sentAt?: string;
+  items: InvoiceItem[];
+  service?: {
+    description: string;
+    date: string;
+  };
+  vehicle?: {
+    plate: string;
+  };
+}
+
 interface Service {
   id: string;
   description: string;
@@ -68,6 +106,7 @@ interface Service {
   date: string;
   rating?: number;
   mechanic?: Mechanic | null;
+  invoiceId?: string;
 }
 
 const ServicesPage = () => {
@@ -84,9 +123,9 @@ const ServicesPage = () => {
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const [loading, setLoading] = useState({
     vehicles: false,
-    currentServices: false,
-    serviceHistory: false,
+    services: false,
     rating: false,
+    invoice: false,
   });
   const [openRatingDialog, setOpenRatingDialog] = useState(false);
   const [selectedServiceToRate, setSelectedServiceToRate] = useState<string | null>(null);
@@ -104,6 +143,15 @@ const ServicesPage = () => {
     year: "",
     plate: "",
   });
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openInvoiceDialog, setOpenInvoiceDialog] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
   const token = sessionStorage.getItem("token");
   const userId = sessionStorage.getItem("userId");
@@ -118,35 +166,23 @@ const ServicesPage = () => {
       }
 
       try {
-        // Fetch vehicles
         setLoading((prev) => ({ ...prev, vehicles: true }));
-        const vehiclesRes = await apiClient.get("/api/vehicles", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setVehicles(vehiclesRes.data);
+        const vehiclesData = await getVehicles();
+        setVehicles(vehiclesData);
 
-        // Fetch current services
-        setLoading((prev) => ({ ...prev, currentServices: true }));
-        const currentRes = await apiClient.get("/api/services", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setCurrentServices(currentRes.data.filter((s: Service) => s.status === "In Progress"));
-
-        // Fetch service history
-        setLoading((prev) => ({ ...prev, serviceHistory: true }));
-        const historyRes = await apiClient.get("/api/services", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setServiceHistory(historyRes.data.filter((s: Service) => s.status !== "In Progress"));
-      } catch (error) {
+        setLoading((prev) => ({ ...prev, services: true }));
+        const servicesData = await getServices();
+        setCurrentServices(servicesData.filter((s: Service) => s.status === "In Progress"));
+        setServiceHistory(servicesData.filter((s: Service) => s.status !== "In Progress"));
+      } catch (error: any) {
         console.error("Fetch error:", error);
-      } finally {
-        setLoading({
-          vehicles: false,
-          currentServices: false,
-          serviceHistory: false,
-          rating: false,
+        setSnackbar({
+          open: true,
+          message: error.message || "Failed to load data. Please try again.",
+          severity: "error",
         });
+      } finally {
+        setLoading((prev) => ({ ...prev, vehicles: false, services: false }));
       }
     };
     fetchData();
@@ -165,40 +201,69 @@ const ServicesPage = () => {
 
   const handleAddVehicle = async () => {
     try {
-      const res = await apiClient.post("/api/vehicles", vehicleData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setVehicles((prev) => [...prev, res.data]);
+      const newVehicle = await addVehicle(vehicleData);
+      setVehicles((prev) => [...prev, newVehicle]);
       setVehicleData({ make: "", model: "", year: "", plate: "" });
       setOpenVehicleDialog(false);
+      setSnackbar({
+        open: true,
+        message: "Vehicle added successfully!",
+        severity: "success",
+      });
     } catch (error: any) {
-      console.error("Add vehicle error:", error.message);
+      console.error("Add vehicle error:", error);
+      setSnackbar({
+        open: true,
+        message: error.message || "Failed to add vehicle. Please try again.",
+        severity: "error",
+      });
     }
   };
 
+  const handleOpenDeleteDialog = () => {
+    setOpenDeleteDialog(true);
+    handleMenuClose();
+  };
+
   const handleDeleteVehicle = async () => {
-    if (selectedVehicle && token) {
+    if (selectedVehicle) {
       try {
-        await apiClient.delete(`/api/vehicles/${selectedVehicle}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await deleteVehicle(selectedVehicle);
         setVehicles((prev) => prev.filter((v) => v.id !== selectedVehicle));
-      } catch (error) {
+        setOpenDeleteDialog(false);
+        setSnackbar({
+          open: true,
+          message: "Vehicle deleted successfully!",
+          severity: "success",
+        });
+      } catch (error: any) {
         console.error("Delete vehicle error:", error);
+        setSnackbar({
+          open: true,
+          message: error.message || "Failed to delete vehicle. Please try again.",
+          severity: "error",
+        });
       }
-      handleMenuClose();
     }
   };
 
   const handleEditVehicle = async () => {
     try {
-      const res = await apiClient.put(`/api/vehicles/${editVehicleData.id}`, editVehicleData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setVehicles((prev) => prev.map((v) => (v.id === editVehicleData.id ? res.data : v)));
+      const updatedVehicle = await updateVehicle(editVehicleData.id, editVehicleData);
+      setVehicles((prev) => prev.map((v) => (v.id === editVehicleData.id ? updatedVehicle : v)));
       setOpenEditDialog(false);
-    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: "Vehicle updated successfully!",
+        severity: "success",
+      });
+    } catch (error: any) {
       console.error("Edit vehicle error:", error);
+      setSnackbar({
+        open: true,
+        message: error.message || "Failed to edit vehicle. Please try again.",
+        severity: "error",
+      });
     }
   };
 
@@ -207,20 +272,16 @@ const ServicesPage = () => {
   };
 
   const handleRateService = async () => {
-    if (selectedServiceToRate && ratingValue !== null && token) {
+    if (selectedServiceToRate && ratingValue !== null) {
       try {
         setLoading((prev) => ({ ...prev, rating: true }));
         setRatingError(null);
         setRatingSuccess(null);
         const payload = {
           rating: ratingValue,
-          comment: ratingComment.trim() || undefined, // Include comment if provided
+          comment: ratingComment.trim() || undefined,
         };
-        await apiClient.patch(
-          `/api/services/${selectedServiceToRate}/rate`,
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await rateService(selectedServiceToRate, payload);
         setServiceHistory((prev) =>
           prev.map((service) =>
             service.id === selectedServiceToRate
@@ -235,10 +296,10 @@ const ServicesPage = () => {
           setRatingValue(null);
           setRatingComment("");
           setRatingSuccess(null);
-        }, 1500); // Close dialog after 1.5s to show success
+        }, 1500);
       } catch (error: any) {
         console.error("Error rating service:", error);
-        setRatingError(error.response?.data?.message || "Failed to submit rating. Please try again.");
+        setRatingError(error.message || "Failed to submit rating. Please try again.");
       } finally {
         setLoading((prev) => ({ ...prev, rating: false }));
       }
@@ -252,6 +313,42 @@ const ServicesPage = () => {
     setRatingError(null);
     setRatingSuccess(null);
     setOpenRatingDialog(true);
+  };
+
+  const handleViewInvoice = async (invoiceId: string) => {
+    try {
+      setLoading((prev) => ({ ...prev, invoice: true }));
+      setInvoiceError(null);
+      const invoices = await getInvoices();
+      const invoice = invoices.find((inv: Invoice) => inv.id === invoiceId);
+      if (invoice) {
+        setSelectedInvoice(invoice);
+        setOpenInvoiceDialog(true);
+      } else {
+        setInvoiceError("Invoice not found.");
+        setSnackbar({
+          open: true,
+          message: "Invoice not found.",
+          severity: "error",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error fetching invoice:", error);
+      setInvoiceError(error.message || "Failed to fetch invoice.");
+      setSnackbar({
+        open: true,
+        message: error.message || "Failed to fetch invoice.",
+        severity: "error",
+      });
+    } finally {
+      setLoading((prev) => ({ ...prev, invoice: false }));
+    }
+  };
+
+  const handleCloseInvoiceDialog = () => {
+    setOpenInvoiceDialog(false);
+    setSelectedInvoice(null);
+    setInvoiceError(null);
   };
 
   const handleLogout = () => {
@@ -271,13 +368,16 @@ const ServicesPage = () => {
 
   const handleViewVehicleDetails = async (vehicleId: string) => {
     try {
-      const res = await apiClient.get(`/api/vehicles/${vehicleId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSelectedVehicleDetails(res.data);
+      const vehicle = await getVehicleById(vehicleId);
+      setSelectedVehicleDetails(vehicle);
       setOpenDetailsDialog(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching vehicle details:", error);
+      setSnackbar({
+        open: true,
+        message: error.message || "Failed to fetch vehicle details.",
+        severity: "error",
+      });
     }
   };
 
@@ -289,64 +389,36 @@ const ServicesPage = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Completed":
+      case "Paid":
         return "success";
       case "In Progress":
+      case "Sent":
         return "info";
       case "Cancelled":
+      case "Overdue":
         return "error";
       default:
         return "default";
     }
   };
 
+  const formatCurrency = (value: number | string | undefined): string => {
+    const num = Number(value);
+    return isNaN(num) ? "0.00" : num.toFixed(2);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
   return (
     <Box sx={{ flexGrow: 1, bgcolor: "#f5f5f7", minHeight: "100vh" }}>
       {/* App Bar */}
-      <AppBar
-        position="fixed"
-        color="default"
-        elevation={0}
-        sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-          boxShadow: "none",
-          borderBottom: "1px solid #e0e0e0",
-          bgcolor: "white",
-        }}
-      >
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold", color: "#2a3e78" }}>
-            AutoCare Hub
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Typography variant="body1" sx={{ mr: 2, color: "#2a3e78" }}>
-              Welcome, {username}!
-            </Typography>
-            <Tooltip title="Account settings">
-              <IconButton onClick={handleOpenUserMenu} sx={{ ml: 2 }}>
-                <Avatar sx={{ bgcolor: "#2a3e78" }}>
-                  {username.charAt(0).toUpperCase()}
-                </Avatar>
-              </IconButton>
-            </Tooltip>
-            <Menu
-              anchorEl={anchorElUser}
-              open={Boolean(anchorElUser)}
-              onClose={handleCloseUserMenu}
-              sx={{ mt: "45px" }}
-              anchorOrigin={{ vertical: "top", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-            >
-              <MenuItem onClick={handleLogout}>
-                <ListItemIcon>
-                  <ExitToAppIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Logout</ListItemText>
-              </MenuItem>
-            </Menu>
-          </Box>
-        </Toolbar>
-      </AppBar>
-      <Toolbar />
+
 
       {/* Main Content */}
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -456,14 +528,13 @@ const ServicesPage = () => {
                     sx={{ color: "#f59e0b" }}
                   />
                   <TextField
-                    label="Optional Comment"
-                    fullWidth
+                    label="Comment (optional)"
                     multiline
                     rows={3}
+                    fullWidth
                     value={ratingComment}
                     onChange={(e) => setRatingComment(e.target.value)}
-                    margin="normal"
-                    helperText="Share your feedback about the service (optional)"
+                    sx={{ mt: 2 }}
                   />
                   {ratingError && (
                     <Alert severity="error" sx={{ mt: 2, width: "100%" }}>
@@ -524,7 +595,9 @@ const ServicesPage = () => {
                 )}
               </DialogContent>
               <DialogActions>
-                <Button onClick={() => setOpenDetailsDialog(false)}>Close</Button>
+                <Button onClick={() => setOpenDetailsDialog(false)} sx={{ textTransform: "none" }}>
+                  Close
+                </Button>
               </DialogActions>
             </Dialog>
 
@@ -593,6 +666,204 @@ const ServicesPage = () => {
                 </Button>
               </DialogActions>
             </Dialog>
+
+            {/* Delete Vehicle Confirmation Dialog */}
+            <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)} maxWidth="sm" fullWidth>
+              <DialogTitle sx={{ bgcolor: "#2a3e78", color: "white", fontWeight: "bold" }}>
+                Confirm Delete
+              </DialogTitle>
+              <DialogContent sx={{ pt: 3 }}>
+                <Typography>
+                  Are you sure you want to delete this vehicle? This action cannot be undone.
+                </Typography>
+              </DialogContent>
+              <DialogActions sx={{ p: 3 }}>
+                <Button onClick={() => setOpenDeleteDialog(false)} sx={{ textTransform: "none" }}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleDeleteVehicle}
+                  sx={{ textTransform: "none", px: 3 }}
+                >
+                  Delete
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* Invoice Details Dialog */}
+            <Dialog
+              open={openInvoiceDialog}
+              onClose={handleCloseInvoiceDialog}
+              maxWidth="md"
+              fullWidth
+              sx={{
+                "& .MuiDialog-paper": {
+                  borderRadius: "1rem",
+                  boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
+                  maxHeight: "85vh",
+                  margin: "1rem",
+                },
+              }}
+            >
+              <Box sx={{ position: "relative", bgcolor: "#2a3e78", p: 2 }}>
+                <DialogTitle sx={{ color: "white", fontWeight: "bold", fontSize: "1.75rem", p: 0 }}>
+                  {selectedInvoice && `Invoice #${selectedInvoice.id.slice(0, 8)}`}
+                </DialogTitle>
+                <IconButton
+                  onClick={handleCloseInvoiceDialog}
+                  sx={{
+                    position: "absolute",
+                    top: "1rem",
+                    right: "1rem",
+                    color: "#ffffff",
+                    bgcolor: "#ffffff1f",
+                    "&:hover": { bgcolor: "#ffffff3f" },
+                  }}
+                >
+                  <Typography sx={{ fontSize: "1.25rem" }}>×</Typography>
+                </IconButton>
+              </Box>
+              <DialogContent sx={{ p: 3, bgcolor: "#ffffff" }}>
+                {loading.invoice ? (
+                  <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : invoiceError ? (
+                  <Alert severity="error">{invoiceError}</Alert>
+                ) : selectedInvoice ? (
+                  <Box>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 3,
+                        pb: 2,
+                        borderBottom: "1px solid #e5e7eb",
+                      }}
+                    >
+                      <Typography variant="h6" sx={{ fontWeight: 700, color: "#1e293b" }}>
+                        Invoice #{selectedInvoice.id.slice(0, 8)}
+                      </Typography>
+                      <Chip
+                        label={selectedInvoice.status.toUpperCase()}
+                        color={getStatusColor(selectedInvoice.status)}
+                        sx={{ textTransform: "uppercase", fontWeight: 600 }}
+                      />
+                    </Box>
+
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: "#1e293b", mb: 1.5, fontSize: "1.125rem" }}>
+                        Details
+                      </Typography>
+                      <Typography sx={{ fontSize: "0.875rem", color: "#475569", lineHeight: 1.5 }}>
+                        Service: {selectedInvoice.service?.description || "N/A"}
+                      </Typography>
+                      <Typography sx={{ fontSize: "0.875rem", color: "#475569", lineHeight: 1.5 }}>
+                        Vehicle Plate: {selectedInvoice.vehicle?.plate || "N/A"}
+                      </Typography>
+                      <Typography sx={{ fontSize: "0.875rem", color: "#475569", lineHeight: 1.5 }}>
+                        Created: {formatDate(selectedInvoice.createdAt)}
+                      </Typography>
+                      {selectedInvoice.sentAt && (
+                        <Typography sx={{ fontSize: "0.875rem", color: "#475569", lineHeight: 1.5 }}>
+                          Sent: {formatDate(selectedInvoice.sentAt)}
+                        </Typography>
+                      )}
+                    </Box>
+
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: "#1e293b", mb: 1.5, fontSize: "1.125rem" }}>
+                        Invoice Items
+                      </Typography>
+                      <Table sx={{ border: "1px solid #e5e7eb", borderRadius: "0.5rem", overflow: "hidden" }}>
+                        <TableHead sx={{ bgcolor: "#f9fafb" }}>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#1e293b" }}>
+                              Description
+                            </TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#1e293b" }}>
+                              Quantity
+                            </TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#1e293b" }}>
+                              Unit Price
+                            </TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, fontSize: "0.875rem", color: "#1e293b" }}>
+                              Total
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {selectedInvoice.items.map((item, index) => (
+                            <TableRow
+                              key={index}
+                              sx={{
+                                "&:hover": { bgcolor: "#f9fafb" },
+                                borderTop: index !== 0 ? "1px solid #e5e7eb" : "none",
+                              }}
+                            >
+                              <TableCell sx={{ fontSize: "0.875rem", color: "#475569" }}>
+                                {item.description}
+                              </TableCell>
+                              <TableCell align="right" sx={{ fontSize: "0.875rem", color: "#475569" }}>
+                                {item.quantity}
+                              </TableCell>
+                              <TableCell align="right" sx={{ fontSize: "0.875rem", color: "#475569" }}>
+                                KES {formatCurrency(item.unitPrice)}
+                              </TableCell>
+                              <TableCell align="right" sx={{ fontSize: "0.875rem", color: "#475569" }}>
+                                KES {formatCurrency(item.total)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Box>
+
+                    <Box sx={{ textAlign: "right", pt: 2, borderTop: "1px solid #e5e7eb" }}>
+                      <Typography variant="h6" sx={{ fontWeight: 700, fontSize: "1.25rem", color: "#1e293b" }}>
+                        Total: KES {formatCurrency(selectedInvoice.totalAmount)}
+                      </Typography>
+                      <Typography sx={{ fontSize: "0.875rem", color: "#475569", mt: 0.5 }}>
+                        Status: {selectedInvoice.status.toUpperCase()}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ) : (
+                  <Typography>No invoice data available.</Typography>
+                )}
+              </DialogContent>
+              <DialogActions sx={{ p: 3 }}>
+                <Button
+                  onClick={handleCloseInvoiceDialog}
+                  sx={{
+                    textTransform: "none",
+                    color: "#2a3e78",
+                    "&:hover": { bgcolor: "#e8eaf6" },
+                  }}
+                >
+                  Close
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* Snackbar for Feedback */}
+            <Snackbar
+              open={snackbar.open}
+              autoHideDuration={6000}
+              onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+            >
+              <Alert
+                severity={snackbar.severity}
+                sx={{ width: "100%" }}
+                onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+              >
+                {snackbar.message}
+              </Alert>
+            </Snackbar>
 
             {/* My Vehicles Section */}
             <Fade in timeout={700}>
@@ -690,7 +961,7 @@ const ServicesPage = () => {
                     Ongoing Services
                   </Typography>
                 </Box>
-                {loading.currentServices ? (
+                {loading.services ? (
                   <Box display="flex" justifyContent="center" py={4}>
                     <CircularProgress />
                   </Box>
@@ -716,7 +987,7 @@ const ServicesPage = () => {
                                 </Typography>
                                 {service.mechanic && (
                                   <Typography variant="body2" color="text.secondary">
-                                    Mechanic: {service.mechanic.username || 'Unassigned'}
+                                    Mechanic: {service.mechanic.username || "Unassigned"}
                                   </Typography>
                                 )}
                               </Box>
@@ -766,7 +1037,7 @@ const ServicesPage = () => {
                     Service History
                   </Typography>
                 </Box>
-                {loading.serviceHistory ? (
+                {loading.services ? (
                   <Box display="flex" justifyContent="center" py={4}>
                     <CircularProgress />
                   </Box>
@@ -792,7 +1063,7 @@ const ServicesPage = () => {
                                 </Typography>
                                 {service.mechanic && (
                                   <Typography variant="body2" color="text.secondary">
-                                    Serviced by: {service.mechanic.username || 'Unassigned'}
+                                    Serviced by: {service.mechanic.username || "Unassigned"}
                                   </Typography>
                                 )}
                               </Box>
@@ -837,6 +1108,8 @@ const ServicesPage = () => {
                                   variant="outlined"
                                   size="small"
                                   startIcon={<Receipt />}
+                                  onClick={() => service.invoiceId && handleViewInvoice(service.invoiceId)}
+                                  disabled={!service.invoiceId || loading.invoice}
                                   sx={{
                                     textTransform: "none",
                                     borderColor: "#2a3e78",
@@ -888,13 +1161,28 @@ const ServicesPage = () => {
                 </ListItemIcon>
                 <ListItemText>Edit Vehicle</ListItemText>
               </MenuItem>
-              <MenuItem onClick={handleDeleteVehicle}>
+              <MenuItem onClick={handleOpenDeleteDialog}>
                 <ListItemIcon>
                   <Delete fontSize="small" color="error" />
                 </ListItemIcon>
                 <ListItemText>Delete Vehicle</ListItemText>
               </MenuItem>
             </Menu>
+
+            {/* Add global animations */}
+            <style jsx global>{`
+              @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              @keyframes slideUp {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+              }
+              .MuiDialog-paper {
+                animation: slideUp 0.3s ease-out;
+              }
+            `}</style>
           </Box>
         </Fade>
       </Container>

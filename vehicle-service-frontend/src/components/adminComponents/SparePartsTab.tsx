@@ -4,9 +4,11 @@ import {
   useSortBy, 
   useFilters, 
   usePagination, 
-  Column as TableColumn, 
-  Row as TableRow,
-  IdType
+  Column,
+  Row,
+  TableInstance,
+  HeaderGroup,
+  ColumnInstance
 } from 'react-table';
 import styles from '../adminComponents/styles/styles.module.css';
 import {
@@ -16,8 +18,7 @@ import {
   deleteSparePart,
   uploadImage
 } from '../../services/sparePartApi';
-import ConfirmationDialog from '../adminComponents/ConfirmationDialog'; // Update the path accordingly
-
+import ConfirmationDialog from '../adminComponents/ConfirmationDialog';
 
 // Define types
 interface SparePart {
@@ -28,10 +29,6 @@ interface SparePart {
   picture?: string;
   criticalLevel: boolean;
 }
-
-// Extended type for react-table columns
-type Column<T extends object> = TableColumn<T>;
-type Row<T extends object> = TableRow<T>;
 
 // ErrorBoundary component
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
@@ -221,7 +218,7 @@ const SparePartsTab: React.FC = () => {
       accessor: 'price',
       Cell: ({ value }: { value: number | undefined }) => (
         <span className={styles.priceCell}>
-          {value !== undefined ? `$${value.toFixed(2)}` : 'N/A'}
+          {value !== undefined ? `KES ${value.toFixed(2)}` : 'N/A'}
         </span>
       ),
       Filter: NumberRangeColumnFilter,
@@ -232,9 +229,9 @@ const SparePartsTab: React.FC = () => {
       accessor: 'quantity',
       Filter: NumberRangeColumnFilter,
       filter: 'between',
-      Cell: ({ value }: { value: number }) => (
-        <span className={value <= 5 ? styles.lowStock : styles.inStock}>
-          {value}
+      Cell: ({ value }: { value: number | undefined }) => (
+        <span className={value !== undefined && value <= 5 ? styles.lowStock : styles.inStock}>
+          {value !== undefined ? value : 'N/A'}
         </span>
       )
     },
@@ -296,13 +293,6 @@ const SparePartsTab: React.FC = () => {
 
   const data = useMemo(() => spareParts, [spareParts]);
 
-  const tableInstance = useTable<SparePart>(
-    { columns, data, initialState: { pageSize: 5 } },
-    useFilters,
-    useSortBy,
-    usePagination
-  );
-
   const {
     getTableProps,
     getTableBodyProps,
@@ -317,7 +307,16 @@ const SparePartsTab: React.FC = () => {
     nextPage,
     previousPage,
     state: { pageIndex }
-  } = tableInstance;
+  } = useTable<SparePart>(
+    {
+      columns,
+      data,
+      initialState: { pageSize: 5 }
+    },
+    useFilters,
+    useSortBy,
+    usePagination
+  ) as TableInstance<SparePart>;
 
   if (loading) return <div className={styles.loading}>Loading...</div>;
   if (error) return <div className={styles.error}>{error}</div>;
@@ -416,11 +415,11 @@ const SparePartsTab: React.FC = () => {
         <div className={styles.tableContainer}>
           <table {...getTableProps()} className={styles.dataTable}>
             <thead>
-              {headerGroups.map(headerGroup => {
+              {headerGroups.map((headerGroup: HeaderGroup<SparePart>) => {
                 const { key, ...restHeaderGroupProps } = headerGroup.getHeaderGroupProps();
                 return (
                   <tr key={key} {...restHeaderGroupProps}>
-                    {headerGroup.headers.map(column => {
+                    {headerGroup.headers.map((column: ColumnInstance<SparePart>) => {
                       const { key: headerKey, ...restHeaderProps } = column.getHeaderProps(column.getSortByToggleProps());
                       return (
                         <th key={headerKey} {...restHeaderProps}>
@@ -438,7 +437,7 @@ const SparePartsTab: React.FC = () => {
               })}
               {headerGroups.length > 0 && (
                 <tr className={styles.filterRow}>
-                  {headerGroups[0].headers.map(column => (
+                  {headerGroups[0].headers.map((column: ColumnInstance<SparePart>) => (
                     <th key={column.id}>
                       {column.Filter ? (
                         <div className={styles.filterWrapper}>
@@ -452,7 +451,7 @@ const SparePartsTab: React.FC = () => {
             </thead>
             <tbody {...getTableBodyProps()}>
               {page.length > 0 ? (
-                page.map(row => {
+                page.map((row: Row<SparePart>) => {
                   prepareRow(row);
                   const { key, ...restRowProps } = row.getRowProps();
                   return (
@@ -538,12 +537,12 @@ const SparePartsTab: React.FC = () => {
 
         {/* Delete Confirmation Dialog */}
         <ConfirmationDialog
-  isOpen={showDeleteDialog}
-  onConfirm={handleDelete}
-  onCancel={closeDeleteDialog}
-  title="Confirm Deletion"
-  message="Are you sure you want to delete this spare part?"
-/>
+          isOpen={showDeleteDialog}
+          onConfirm={handleDelete}
+          onCancel={closeDeleteDialog}
+          title="Confirm Deletion"
+          message="Are you sure you want to delete this spare part?"
+        />
 
         {/* Toast Notification */}
         {toast && <Toast message={toast.message} type={toast.type} />}
@@ -555,9 +554,9 @@ const SparePartsTab: React.FC = () => {
 // Filter Components
 const DefaultColumnFilter: React.FC<{
   column: {
-    filterValue: string;
+    filterValue: string | undefined;
     setFilter: (value: string | undefined) => void;
-    id: IdType<SparePart>;
+    id: string;
   };
 }> = ({ column }) => {
   return (
@@ -572,10 +571,10 @@ const DefaultColumnFilter: React.FC<{
 
 const NumberRangeColumnFilter: React.FC<{
   column: {
-    filterValue: [number | undefined, number | undefined];
-    setFilter: (value: [number | undefined, number | undefined]) => void;
+    filterValue: [number | undefined, number | undefined] | undefined;
+    setFilter: (value: [number | undefined, number | undefined] | undefined) => void;
     preFilteredRows: Row<SparePart>[];
-    id: IdType<SparePart>;
+    id: string;
   };
 }> = ({ column }) => {
   const [min, max] = useMemo(() => {
@@ -588,7 +587,7 @@ const NumberRangeColumnFilter: React.FC<{
         maxVal = Math.max(maxVal, value);
       }
     });
-    return [minVal === Infinity ? 0 : minVal, maxVal === -Infinity ? 0 : maxVal];
+    return [minVal === Infinity ? 0 : minVal, maxVal === -Infinity ? 0 : -1];
   }, [column.id, column.preFilteredRows]);
 
   const [minInput, maxInput] = column.filterValue || [undefined, undefined];
@@ -602,7 +601,7 @@ const NumberRangeColumnFilter: React.FC<{
           const val = e.target.value ? parseFloat(e.target.value) : undefined;
           column.setFilter([val, maxInput]);
         }}
-        placeholder={`Min ${min}`}
+        placeholder={`Min (${min})`}
         className={styles.rangeInput}
       />
       <span className={styles.rangeSeparator}>to</span>
@@ -613,7 +612,7 @@ const NumberRangeColumnFilter: React.FC<{
           const val = e.target.value ? parseFloat(e.target.value) : undefined;
           column.setFilter([minInput, val]);
         }}
-        placeholder={`Max ${max}`}
+        placeholder={`Max (${max})`}
         className={styles.rangeInput}
       />
     </div>
@@ -622,10 +621,10 @@ const NumberRangeColumnFilter: React.FC<{
 
 const SelectColumnFilter: React.FC<{
   column: {
-    filterValue: string;
+    value: string | undefined;
     setFilter: (value: string | undefined) => void;
     preFilteredRows: Row<SparePart>[];
-    id: IdType<SparePart>;
+    id: string;
   };
 }> = ({ column }) => {
   const options = useMemo(() => {

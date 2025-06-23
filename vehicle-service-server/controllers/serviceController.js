@@ -76,7 +76,7 @@ const getAllServicedVehicles = async (req, res) => {
           include: [
             {
               model: User,
-              as: 'owner', // Alias for vehicle owner
+              as: 'owner',
               attributes: ['id', 'username', 'phone', 'email'],
             },
           ],
@@ -174,7 +174,7 @@ const getAssignedServicesToMechanic = async (req, res) => {
           include: [
             {
               model: User,
-              as: 'owner', // This should match your association
+              as: 'owner',
               attributes: ['id', 'username', 'phone', 'email'],
             },
           ],
@@ -195,5 +195,72 @@ const getAssignedServicesToMechanic = async (req, res) => {
   }
 };
 
+const rateService = async (req, res) => {
+  const { serviceId } = req.params;
+  const { rating, comment } = req.body;
+  const userId = req.user.id;
 
-module.exports = { createService, getUserServices, getAllServicedVehicles, updateServiceAssignment,getAssignedServicesToMechanic };
+  try {
+    // Validate input
+    if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: 'Rating must be a number between 1 and 5' });
+    }
+
+    // Ensure Service model is defined
+    if (!Service) {
+      console.error('Service model is not defined');
+      return res.status(500).json({ message: 'Server error: Service model not found' });
+    }
+
+    // Find the service
+    const service = await Service.findByPk(serviceId, {
+      include: [
+        {
+          model: Vehicle,
+          as: 'vehicle',
+          where: { userId }, // Ensure the vehicle belongs to the user
+          attributes: ['id', 'userId'],
+        },
+      ],
+    });
+
+    if (!service) {
+      return res.status(404).json({ message: 'Service not found or you are not authorized to rate it' });
+    }
+
+    // Ensure service is completed
+    if (service.status !== 'Completed') {
+      return res.status(400).json({ message: 'Only completed services can be rated' });
+    }
+
+    // Update service with rating and optional comment
+    await service.update({
+      rating,
+      comment: comment || null, // Store null if no comment provided
+    });
+
+    // Fetch updated service with associations
+    const updatedService = await Service.findByPk(serviceId, {
+      include: [
+        { model: Vehicle, as: 'vehicle', attributes: ['id', 'make', 'model', 'plate', 'year'] },
+        { model: User, as: 'mechanic', attributes: ['id', 'username'], required: false },
+      ],
+      attributes: ['id', 'description', 'status', 'date', 'rating', 'comment', 'createdAt'],
+    });
+
+    return res.status(200).json({ message: 'Service rated successfully', service: updatedService });
+  } catch (error) {
+    console.error('Error rating service:', error.stack);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+
+module.exports = { 
+  createService, 
+  getUserServices, 
+  getAllServicedVehicles, 
+  updateServiceAssignment, 
+  getAssignedServicesToMechanic, 
+  rateService 
+};
