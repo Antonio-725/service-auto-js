@@ -86,7 +86,7 @@ interface Invoice {
   totalAmount: number;
   status: string;
   createdAt: string;
-  sentAt?: string;
+  sentAt?: string | null;
   items: InvoiceItem[];
   service?: {
     description: string;
@@ -417,9 +417,7 @@ const ServicesPage = () => {
 
   return (
     <Box sx={{ flexGrow: 1, bgcolor: "#f5f5f7", minHeight: "100vh" }}>
-      {/* App Bar */}
-
-
+    
       {/* Main Content */}
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Fade in timeout={500}>
@@ -1027,6 +1025,7 @@ const ServicesPage = () => {
             </Fade>
 
             {/* Service History Section */}
+            {/* Service History Section */}
             <Fade in timeout={1100}>
               <Paper sx={{ p: 3, mb: 4, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
                 <Box display="flex" alignItems="center" mb={3}>
@@ -1050,8 +1049,15 @@ const ServicesPage = () => {
                 ) : (
                   <Grid container spacing={3}>
                     {serviceHistory.map((service) => (
-                      <Grid item xs={12} key={service.id}>
-                        <Card sx={{ borderRadius: 3 }}>
+                      <Grid item xs={12} sm={6} md={4} key={service.id}>
+                        <Card sx={{ 
+                          borderRadius: 3,
+                          transition: "transform 0.3s, box-shadow 0.3s",
+                          "&:hover": {
+                            transform: "translateY(-4px)",
+                            boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+                          },
+                        }}>
                           <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center">
                               <Box>

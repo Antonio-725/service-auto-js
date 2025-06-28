@@ -1,3 +1,16 @@
+interface Vehicle {
+  id: string;
+  make: string;
+  model: string;
+  year: string;
+  plate: string;
+  owner?: {
+    id: string;
+    username: string;
+    email: string;
+  };
+}
+
 interface Service {
   id: string;
   description: string;
@@ -26,6 +39,7 @@ interface SparePart {
   vehicleId: string;
   createdAt: string;
 }
+
 
 interface SparePartRequest {
   id: string;
@@ -86,4 +100,4 @@ interface Invoice {
   
 }
 
-export type{ Service, SparePart, SparePartRequest, InvoiceItem, Invoice };
+export type{ Service, SparePart, SparePartRequest, InvoiceItem, Invoice,Vehicle };

@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -10,36 +10,48 @@ import {
   CircularProgress,
 } from "@mui/material";
 import AuthFormContainer from "../components/auth/AuthFormContainer";
+import { verifyOtp } from "../utils/apiClient";
 
 const Otp = () => {
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
   const navigate = useNavigate();
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
     const role = sessionStorage.getItem("role");
+    const userId = sessionStorage.getItem("userId");
 
-    // Simulate OTP verification
-    setTimeout(() => {
-      if (otp === "123456") {
-        if (role === "mechanic") {
-          sessionStorage.setItem("role", "mechanic_verified");
-          navigate("/mechanic");
-        } else {
-          sessionStorage.setItem("role", "client");
-          navigate("/");
-        }
-      } else {
-        setError("Invalid OTP. Please try again.");
-      }
+    if (!userId) {
+      setError("User ID not found. Please log in again.");
       setIsLoading(false);
-    }, 1000);
+      return;
+    }
+
+    if (otp.length !== 6 || isNaN(Number(otp))) {
+      setError("OTP must be a 6-digit number.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      await verifyOtp(otp, userId);
+
+      if (role === "mechanic") {
+        sessionStorage.setItem("role", "mechanic_verified");
+        navigate("/mechanic");
+      } else {
+        sessionStorage.setItem("role", "client");
+        navigate("/");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid OTP. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -54,7 +66,7 @@ const Otp = () => {
             label="OTP"
             fullWidth
             value={otp}
-            onChange={(e) => setOtp(e.target.value)}
+            onChange={(e) => setOtp(e.target.value.trim())}
             required
             inputProps={{ maxLength: 6 }}
             autoFocus

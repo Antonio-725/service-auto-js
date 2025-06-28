@@ -53,10 +53,6 @@ const Login = () => {
     sessionStorage.setItem("userId", res.id);
     sessionStorage.setItem("username", res.username);
 
-    // localStorage.setItem("token", res.token);
-    // localStorage.setItem("role", res.role);
-    // localStorage.setItem("userId", res.id);
-    // localStorage.setItem("username", res.username); // 👈 Add username here
     refreshAuthState(); // ✅ Refresh auth context
 
     switch (res.role) {

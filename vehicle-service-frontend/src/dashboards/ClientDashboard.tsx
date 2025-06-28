@@ -71,9 +71,7 @@ const DashboardLayout = () => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap sx={{ flexGrow: 1, fontWeight: "bold" }}>
-            AutoCare Hub
-          </Typography>
+
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <Typography variant="body1" sx={{ mr: 2 }}>
               Welcome, {username}!

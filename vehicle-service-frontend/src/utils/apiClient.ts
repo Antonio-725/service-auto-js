@@ -103,8 +103,15 @@ interface SparePartRequest {
   unitPrice: number;
   createdAt: string;
 }
+
 interface SendInvoiceEmailRequest {
   recipientEmail: string;
+}
+
+// Add to existing interfaces
+interface VerifyOtpRequest {
+  otp: string;
+  userId: string;
 }
 
 const apiClient = axios.create({
@@ -230,10 +237,10 @@ export const deleteInvoice = async (invoiceId: string) => {
   }
 };
 
-export const getSparePartRequests = async (vehicleId: string, serviceCreatedAt: string) => {
+export const getSparePartRequests = async (serviceId: string) => {
   try {
     const response = await apiClient.get(`/api/spare-part-requests`, {
-      params: { vehicleId, status: "Approved", createdAtGte: serviceCreatedAt },
+      params: { serviceId, status: "Approved" },
     });
     return response.data as SparePartRequest[];
   } catch (error: any) {
@@ -241,6 +248,18 @@ export const getSparePartRequests = async (vehicleId: string, serviceCreatedAt: 
     throw new Error(error.message || "Failed to fetch spare part requests");
   }
 };
+
+// export const getSparePartRequests = async (vehicleId: string, serviceCreatedAt: string) => {
+//   try {
+//     const response = await apiClient.get(`/api/spare-part-requests`, {
+//       params: { vehicleId, status: "Approved", createdAtGte: serviceCreatedAt },
+//     });
+//     return response.data as SparePartRequest[];
+//   } catch (error: any) {
+//     console.error("Error fetching spare part requests:", error.response?.data || error.message);
+//     throw new Error(error.message || "Failed to fetch spare part requests");
+//   }
+// };
 
 // Vehicle-related API calls
 export const getVehicles = async (): Promise<Vehicle[]> => {
@@ -311,6 +330,15 @@ export const sendInvoiceEmail = async (invoiceId: string, data: SendInvoiceEmail
     return response.data;
   } catch (error: any) {
     throw new Error(error.message || 'Failed to send invoice email');
+  }
+};
+
+export const verifyOtp = async (otp: string, userId: string) => {
+  try {
+    const response = await apiClient.post("/api/auth/verify-otp", { otp, userId });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.message || "Failed to verify OTP");
   }
 };
 

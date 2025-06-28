@@ -101,6 +101,7 @@ const getAllServicedVehicles = async (req, res) => {
 const updateServiceAssignment = async (req, res) => {
   const { serviceId } = req.params;
   const { mechanicId, status } = req.body;
+  const today = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD
 
   try {
     if (!Service) {
@@ -111,6 +112,11 @@ const updateServiceAssignment = async (req, res) => {
     const service = await Service.findByPk(serviceId);
     if (!service) {
       return res.status(404).json({ message: 'Service not found' });
+    }
+
+    // Prevent completing a service before its scheduled date
+    if (status === 'Completed' && service.date > today) {
+      return res.status(400).json({ message: 'Cannot complete a service before its scheduled date' });
     }
 
     // Validate mechanic if provided
@@ -135,6 +141,7 @@ const updateServiceAssignment = async (req, res) => {
     const updateData = {};
     if (mechanicId) updateData.mechanicId = mechanicId;
     if (status) updateData.status = status;
+    if (status === 'Completed') updateData.completedAt = new Date().toISOString().split('T')[0];
 
     await service.update(updateData);
 
@@ -152,6 +159,7 @@ const updateServiceAssignment = async (req, res) => {
     return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
 
 const getAssignedServicesToMechanic = async (req, res) => {
   const mechanicId = req.user.id;

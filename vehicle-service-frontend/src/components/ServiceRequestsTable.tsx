@@ -141,6 +141,7 @@ const ServiceRequestsTable: React.FC<ServiceRequestsTableProps> = ({
   };
 
   const handleAssign = async (requestId: string) => {
+    console.log('Assigning service with ID:', requestId); // Add this log
     const mechanicId = selectedMechanics[requestId] || null;
     const status = selectedStatuses[requestId] 
       ?? requests.find(req => req.id === requestId)?.status 

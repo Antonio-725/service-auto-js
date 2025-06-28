@@ -10,7 +10,19 @@ import SparePartRequestsTab from '../components/adminComponents/SparePartRequest
 import { fetchServices, fetchMechanics, updateService } from '../services/serviceApi';
 import InvoicesTab from '../components/adminComponents/InvoicesTab';
 import { getInvoices, logout } from '../utils/apiClient';
+import Loading from '../components/usables/Loading';
 import styles from '../components/adminComponents/styles/styles.module.css';
+
+// Import all interfaces from the separate types file
+import type{
+  StatCard,
+  ServiceRequest,
+  InvoiceResponse,
+  Mechanic,
+  StatusCounts,
+  ServiceStatus,
+  ApiError
+} from '../types/adminTypes';
 
 // Register Chart.js components
 ChartJS.register(
@@ -23,89 +35,16 @@ ChartJS.register(
   Legend
 );
 
-// Types
-interface StatCard {
-  title: string;
-  value: string;
-  change: string;
-  icon: React.ComponentType;
-  color: string;
-}
-
-interface ServiceRequest {
-  id: string;
-  description: string;
-  status: "Pending" | "In Progress" | "Completed" | "Cancelled";
-  date: string;
-  rating: number | null;
-  createdAt: string;
-  vehicle: {
-    id: string;
-    make: string;
-    model: string;
-    plate: string;
-    year: string;
-    owner: {
-      id: string;
-      username: string;
-      phone: string;
-      email: string;
-    };
-  };
-  mechanic: { id: string; username: string; phone: string } | null;
-  priority?: string;
-}
-
-interface InvoiceResponse {
-  id: string;
-  serviceId: string;
-  vehicleId: string;
-  userId: string;
-  items: { description: string; quantity: number; unitPrice: number; total: number }[];
-  laborCost: number;
-  partsCost: number;
-  tax: number;
-  totalAmount: number;
-  status: "Draft" | "Sent" | "Paid" | "Overdue";
-  sentAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  service?: {
-    id: string;
-    description: string;
-    status: string;
-    date: string;
-  };
-  vehicle?: {
-    id: string;
-    make: string;
-    model: string;
-    year: string;
-    plate: string;
-  };
-  user?: {
-    id: string;
-    username: string;
-    email: string;
-  };
-}
-
-interface Mechanic {
-  id: string;
-  username: string;
-  phone: string;
-}
-
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState<string>("overview");
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [invoices, setInvoices] = useState<InvoiceResponse[]>([]);
   const [mechanics, setMechanics] = useState<Mechanic[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async (): Promise<void> => {
       try {
         setLoading(true);
         const [servicesData, mechanicsData, invoicesData] = await Promise.all([
@@ -126,11 +65,15 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  const handleAssign = async (requestId: string, mechanicId: string | null, status: string) => {
+  const handleAssign = async (
+    requestId: string, 
+    mechanicId: string | null, 
+    status: string
+  ): Promise<void> => {
     try {
       const updatedService = await updateService(requestId, { 
         mechanicId, 
-        status: status as ServiceRequest['status'] 
+        status: status as ServiceStatus
       });
       
       setServiceRequests(prev =>
@@ -139,7 +82,7 @@ const AdminDashboard = () => {
             ? { 
                 ...req, 
                 mechanic: mechanicId ? mechanics.find(m => m.id === mechanicId) || null : null,
-                status: status as ServiceRequest['status']
+                status: status as ServiceStatus
               }
             : req
         )
@@ -149,7 +92,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const getStatusCounts = () => {
+  const getStatusCounts = (): StatusCounts => {
     return serviceRequests.reduce(
       (acc, req) => {
         acc[req.status] = (acc[req.status] || 0) + 1;
@@ -219,12 +162,52 @@ const AdminDashboard = () => {
     ];
   };
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     logout(); // Clear localStorage and redirect to /login
   };
 
-  if (loading) return <div className={styles.container}>Loading...</div>;
-  if (error) return <div className={styles.container}>Error: {error}</div>;
+  // Show loading component while data is being fetched
+  if (loading) {
+    return <Loading message="Loading admin dashboard..." />;
+  }
+
+  // Show error state with option to retry
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '50vh',
+          textAlign: 'center',
+          padding: '2rem'
+        }}>
+          <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>
+            Error Loading Dashboard
+          </h2>
+          <p style={{ marginBottom: '1.5rem', color: '#6b7280' }}>
+            {error}
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              fontSize: '1rem'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>

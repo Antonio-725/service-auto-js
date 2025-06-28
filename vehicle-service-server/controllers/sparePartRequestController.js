@@ -1,25 +1,36 @@
-//controller/sparePartRequestController
-const { SparePartRequest, SparePart, User, Vehicle } = require('../model');
+
+// //controller/sparePartRequestController
+const { SparePartRequest, SparePart, User, Vehicle, Service } = require('../model');
 const { v4: uuidv4 } = require('uuid');
 
 const createSparePartRequest = async (req, res) => {
-  const { sparePartId, vehicleId, mechanicId, quantity, totalPrice } = req.body;
+  const { sparePartId, vehicleId, mechanicId, serviceId, quantity, totalPrice } = req.body;
+  const today = new Date().toISOString().split('T')[0];
 
   try {
-    if (!SparePartRequest || !SparePart || !User || !Vehicle) {
+    if (!SparePartRequest || !SparePart || !User || !Vehicle || !Service) {
       console.error('Required models are not defined');
       return res.status(500).json({ message: 'Server error: Models not found' });
     }
 
     // Validate input
-    if (!sparePartId || !vehicleId || !mechanicId || !quantity || totalPrice == null) {
-      return res.status(400).json({ message: 'SparePartId, vehicleId, mechanicId, quantity, and totalPrice are required' });
+    if (!sparePartId || !vehicleId || !mechanicId || !serviceId || !quantity || totalPrice == null) {
+      return res.status(400).json({ message: 'SparePartId, vehicleId, mechanicId, serviceId, quantity, and totalPrice are required' });
     }
     if (quantity < 1) {
       return res.status(400).json({ message: 'Quantity must be positive' });
     }
     if (totalPrice < 0) {
       return res.status(400).json({ message: 'Total price must be non-negative' });
+    }
+
+    // Validate service
+    const service = await Service.findByPk(serviceId);
+    if (!service || service.vehicleId !== vehicleId || service.status === 'Completed' || service.status === 'Cancelled') {
+      return res.status(400).json({ message: 'Invalid or inactive service' });
+    }
+    if (service.date > today) {
+      return res.status(400).json({ message: 'Cannot request parts for a future service' });
     }
 
     // Verify spare part exists and has sufficient stock
@@ -53,6 +64,7 @@ const createSparePartRequest = async (req, res) => {
       sparePartId,
       vehicleId,
       mechanicId,
+      serviceId,
       quantity,
       totalPrice: parseFloat(totalPrice).toFixed(2),
       status: 'Pending',
@@ -66,29 +78,43 @@ const createSparePartRequest = async (req, res) => {
 };
 
 const getAllSparePartRequests = async (req, res) => {
+  const { serviceId, vehicleId, status } = req.query;
+
   try {
-    if (!SparePartRequest) {
-      console.error('SparePartRequest model is not defined');
-      return res.status(500).json({ message: 'Server error: SparePartRequest model not found' });
+    if (!SparePartRequest || !SparePart || !User || !Vehicle || !Service) {
+      console.error('Required models are not defined');
+      return res.status(500).json({ message: 'Server error: Models not found' });
     }
 
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Access denied: Admins only' });
     }
 
+    const where = {};
+    if (serviceId) where.serviceId = serviceId;
+    if (vehicleId) where.vehicleId = vehicleId;
+    if (status) where.status = status;
+
     const requests = await SparePartRequest.findAll({
-      attributes: ['id', 'sparePartId', 'vehicleId', 'mechanicId', 'quantity', 'totalPrice', 'status', 'createdAt', 'updatedAt'],
-      include: [
-        { model: SparePart, as: 'sparePart', attributes: ['name', 'price', 'quantity'] },
-        { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'plate'] },
-        { model: User, as: 'mechanic', attributes: ['username', 'email'] },
-      ],
-    });
+  where,
+  attributes: ['id', 'sparePartId', 'vehicleId', 'mechanicId', 'serviceId', 'quantity', 'totalPrice', 'status', 'createdAt', 'updatedAt'],
+  include: [
+    { model: SparePart, as: 'sparePart', attributes: ['name', 'price', 'quantity'] }, // Remove 'partNumber'
+    { model: Vehicle, as: 'vehicle', attributes: ['make', 'model', 'plate'] },
+    { model: User, as: 'mechanic', attributes: ['username', 'email'] },
+    { model: Service, as: 'service', attributes: ['id', 'description', 'date'] },
+  ],
+});
 
     return res.status(200).json(requests);
   } catch (error) {
-    console.error('Error fetching spare part requests:', error.stack);
-    return res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Error details:', {
+    message: error.message,
+    stack: error.stack,
+    name: error.name,
+    query: { serviceId, vehicleId, status }
+  });
+  return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -97,7 +123,7 @@ const updateSparePartRequestStatus = async (req, res) => {
   const { status } = req.body;
 
   try {
-    if (!SparePartRequest || !SparePart) {
+    if (!SparePartRequest || !SparePart || !Service) {
       console.error('Required models are not defined');
       return res.status(500).json({ message: 'Server error: Models not found' });
     }

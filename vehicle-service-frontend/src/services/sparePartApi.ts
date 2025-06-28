@@ -13,11 +13,13 @@ export interface SparePart {
 }
 
 // Define SparePartRequest type
+// sparePartApi.ts
 export interface SparePartRequest {
   id: string;
   sparePartId: string;
   vehicleId: string;
   mechanicId: string;
+  serviceId: string; // Add serviceId
   quantity: number;
   totalPrice: number;
   status: 'Pending' | 'Approved' | 'Rejected';
@@ -40,7 +42,41 @@ export interface SparePartRequest {
     username: string;
     email: string;
   };
+  service?: { // Add service association
+    id: string;
+    description: string;
+    date: string;
+  };
 }
+
+// export interface SparePartRequest {
+//   id: string;
+//   sparePartId: string;
+//   vehicleId: string;
+//   mechanicId: string;
+//   quantity: number;
+//   totalPrice: number;
+//   status: 'Pending' | 'Approved' | 'Rejected';
+//   createdAt: string;
+//   updatedAt: string;
+//   sparePart?: {
+//     id: string;
+//     name: string;
+//     price: number;
+//     quantity: number;
+//   };
+//   vehicle?: {
+//     id: string;
+//     make: string;
+//     model: string;
+//     plate: string;
+//   };
+//   mechanic?: {
+//     id: string;
+//     username: string;
+//     email: string;
+//   };
+// }
 
 const API_URL = '/api/spare-parts';
 const REQUEST_API_URL = '/api/spare-part-requests';
@@ -156,39 +192,45 @@ export const updateSparePartQuantity = async (id: string, reduceBy: number): Pro
 /**
  * Create a spare part request
  */
-export const createSparePartRequest = async (
-  data: {
-    sparePartId: string;
-    vehicleId: string;
-    mechanicId: string;
-    quantity: number;
-    totalPrice: number;
-  }
-): Promise<SparePartRequest> => {
+// export const createSparePartRequest = async (
+//   data: {
+//     sparePartId: string;
+//     vehicleId: string;
+//     mechanicId: string;
+//     quantity: number;
+//     totalPrice: number;
+//   }
+// ): Promise<SparePartRequest> => {
+//   try {
+//     const response = await apiClient.post<{ message: string; request: SparePartRequest }>(
+//       REQUEST_API_URL,
+//       data
+//     );
+//     return response.data.request;
+//   } catch (error: any) {
+//     const errorMessage = error.response?.data?.message || 'Failed to create spare part request';
+//     throw new Error(errorMessage);
+//   }
+// };
+
+
+export const createSparePartRequest = async (request: {
+  sparePartId: string;
+  vehicleId: string;
+  mechanicId: string;
+  serviceId: string; // Added serviceId
+  quantity: number;
+  totalPrice: number;
+}) => {
   try {
-    const response = await apiClient.post<{ message: string; request: SparePartRequest }>(
-      REQUEST_API_URL,
-      data
-    );
-    return response.data.request;
+    const response = await apiClient.post('/api/spare-part-requests', request);
+    return response.data;
   } catch (error: any) {
-    const errorMessage = error.response?.data?.message || 'Failed to create spare part request';
-    throw new Error(errorMessage);
+    throw new Error(error.response?.data?.message || 'Failed to create spare part request');
   }
 };
 
-/**
- * Fetch all spare part requests
- */
-export const fetchSparePartRequests = async (): Promise<SparePartRequest[]> => {
-  try {
-    const response = await apiClient.get<SparePartRequest[]>(REQUEST_API_URL);
-    return response.data;
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.message || 'Failed to fetch spare part requests';
-    throw new Error(errorMessage);
-  }
-};
+
 
 /**
  * Update spare part request status
@@ -218,6 +260,24 @@ export const fetchRecentRequestsByMechanic = async (): Promise<SparePartRequest[
     return response.data;
   } catch (error: any) {
     const errorMessage = error.response?.data?.message || 'Failed to fetch recent requests';
+    throw new Error(errorMessage);
+  }
+};
+
+// sparePartApi.ts
+/**
+ * Fetch all spare part requests
+ */
+export const fetchSparePartRequests = async (serviceId?: string): Promise<SparePartRequest[]> => {
+  try {
+    const params: { serviceId?: string; status?: string } = {};
+    if (serviceId) {
+      params.serviceId = serviceId;
+    }
+    const response = await apiClient.get<SparePartRequest[]>(REQUEST_API_URL, { params });
+    return response.data;
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || 'Failed to fetch spare part requests';
     throw new Error(errorMessage);
   }
 };

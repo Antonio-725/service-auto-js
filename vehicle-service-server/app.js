@@ -22,6 +22,7 @@ const serviceRoutes = require("./routes/serviceRoutes");
 const sparePartRoutes = require("./routes/sparePartRoutes");
 const sparePartRequestRoutes = require("./routes/sparePartRequestRoutes");
 const invoiceRoutes = require('./routes/invoices');
+const  verifyOtp  = require("./routes/auth.routes");
 
 
 app.use("/api/auth", authRoutes);
@@ -31,13 +32,9 @@ app.use("/api/services", serviceRoutes);
 app.use("/api/spare-parts", sparePartRoutes);
 app.use("/api/spare-part-requests", sparePartRequestRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/auth',verifyOtp);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Note: Database schema managed via migrations
-// const { sequelize } = require("./model");
-// sequelize.sync({ alter: true })
-//   .then(() => console.log("✅ Database synced"))
-//   .catch(err => console.error("❌ DB Sync Error:", err));
 
 module.exports = app;

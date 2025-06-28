@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { 
-  Container, Grid, Card, CardContent, Typography, Divider, Box, 
-  CssBaseline, Chip, CircularProgress, Avatar, LinearProgress, Paper, 
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
-  useMediaQuery, Button, Checkbox, Select, MenuItem, FormControl, 
-  InputLabel, TextField, Dialog, DialogTitle, DialogContent, 
-  DialogActions, Table as MuiTable, TableHead as MuiTableHead, 
+
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  Container, Grid, Card, CardContent, Typography, Divider, Box,
+  CssBaseline, Chip, Avatar, Paper, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Button, Checkbox, Select,
+  MenuItem, FormControl, InputLabel, TextField, Dialog, DialogTitle,useMediaQuery,
+  DialogContent, DialogActions, Table as MuiTable, TableHead as MuiTableHead,
   TableBody as MuiTableBody, TableRow as MuiTableRow, TableCell as MuiTableCell
 } from "@mui/material";
 import { ThemeProvider, createTheme, useTheme } from '@mui/material/styles';
@@ -15,7 +15,6 @@ import TaskHistoryTable from "../components/mechanicComponents/TaskHistoryTable"
 import { fetchAssignedServices, updateService } from "../services/serviceApi";
 import { fetchSpareParts, createSparePartRequest } from "../services/sparePartApi";
 import { fetchRecentRequestsByMechanic } from "../services/sparePartApi";
-import { useSnackbar } from 'notistack';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -34,6 +33,8 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelIcon from '@mui/icons-material/Cancel';
 import RecentSparePartRequestsCard from "../components/mechanicComponents/RecentSparePartRequestsCard";
+import Loading from "../components/usables/Loading"; // Import Loading component
+import Notification from "../components/usables/Notification"; // Import Notification component
 
 // Register ChartJS components
 ChartJS.register(
@@ -152,6 +153,13 @@ interface Vehicle {
   plate: string;
 }
 
+interface Service {
+  id: string;
+  description: string;
+  status: string;
+  vehicle: Vehicle;
+}
+
 interface SelectedPart {
   id: string;
   quantity: number;
@@ -169,21 +177,26 @@ interface SparePartRequest {
 }
 
 const MechanicDashboard = () => {
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<Service[]>([]);
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [services, setServices] = useState<Service[]>([]); // Updated to store services
   const [loading, setLoading] = useState(true);
+  const [submitLoading, setSubmitLoading] = useState(false); // New state for submission loading
   const [selectedPage, setSelectedPage] = useState('dashboard');
   const [user, setUser] = useState('Loading...');
+  const [notification, setNotification] = useState({ open: false, message: '', type: 'success' as 'success' | 'error' });
   const navigate = useNavigate();
-  const { enqueueSnackbar } = useSnackbar();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // State for spare parts selection, quantities, and confirmation dialog
   const [selectedParts, setSelectedParts] = useState<SelectedPart[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<string>('');
+  const [selectedService, setSelectedService] = useState<string>(''); // Updated to select service
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+
+  const showNotification = useCallback((message: string, type: 'success' | 'error') => {
+    setNotification({ open: true, message, type });
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -197,22 +210,23 @@ const MechanicDashboard = () => {
       }
 
       try {
+        setLoading(true);
         // Fetch assigned services
         const serviceData = await fetchAssignedServices();
         if (Array.isArray(serviceData)) {
           setRequests(serviceData);
-          // Filter vehicles based on assigned services with status "In Progress"
-          const assignedVehicles = serviceData
-            .filter((service: any) => service.vehicle && service.status === "In Progress")
-            .map((service: any) => service.vehicle)
+          // Store services and filter vehicles
+          const inProgressServices = serviceData.filter((service: Service) => service.status === "In Progress");
+          setServices(inProgressServices);
+          const assignedVehicles = inProgressServices
+            .map((service: Service) => service.vehicle)
             .filter((vehicle: Vehicle, index: number, self: Vehicle[]) =>
               index === self.findIndex((v) => v.id === vehicle.id)
             );
-          setVehicles(assignedVehicles);
           console.log('Loaded vehicles:', assignedVehicles); // Debug log
         } else {
           setRequests([]);
-          setVehicles([]);
+          setServices([]);
         }
 
         // Fetch spare parts
@@ -230,15 +244,15 @@ const MechanicDashboard = () => {
       } catch (error) {
         setRequests([]);
         setSpareParts([]);
-        setVehicles([]);
-        enqueueSnackbar("Failed to load data", { variant: 'error' });
+        setServices([]);
+        showNotification("Failed to load data", 'error');
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, [enqueueSnackbar, navigate]);
+  }, [navigate, showNotification]);
 
   // Handle spare part selection and quantity
   const handlePartSelection = (partId: string, checked: boolean, quantity: number = 1) => {
@@ -263,15 +277,15 @@ const MechanicDashboard = () => {
   // Handle submission initiation
   const handleInitiateSubmission = () => {
     if (selectedParts.length === 0) {
-      enqueueSnackbar("Please select at least one spare part", { variant: 'warning' });
+      showNotification("Please select at least one spare part", 'error');
       return;
     }
-    if (!selectedVehicle) {
-      enqueueSnackbar("Please select a vehicle", { variant: 'warning' });
+    if (!selectedService) {
+      showNotification("Please select a service", 'error');
       return;
     }
     if (selectedParts.some((p) => p.quantity <= 0)) {
-      enqueueSnackbar("All selected parts must have a quantity greater than 0", { variant: 'warning' });
+      showNotification("All selected parts must have a quantity greater than 0", 'error');
       return;
     }
     // Validate stock availability
@@ -280,7 +294,7 @@ const MechanicDashboard = () => {
       return !part || (part.quantity || 0) < p.quantity;
     });
     if (insufficientStock) {
-      enqueueSnackbar(`Insufficient stock for ${spareParts.find((sp) => sp.id === insufficientStock.id)?.name || 'part'}`, { variant: 'error' });
+      showNotification(`Insufficient stock for ${spareParts.find((sp) => sp.id === insufficientStock.id)?.name || 'part'}`, 'error');
       return;
     }
     // Validate price availability
@@ -289,7 +303,7 @@ const MechanicDashboard = () => {
       return !part || part.price == null;
     });
     if (missingPrice) {
-      enqueueSnackbar(`Price not available for ${spareParts.find((sp) => sp.id === missingPrice.id)?.name || 'part'}`, { variant: 'error' });
+      showNotification(`Price not available for ${spareParts.find((sp) => sp.id === missingPrice.id)?.name || 'part'}`, 'error');
       return;
     }
     setOpenConfirmDialog(true);
@@ -298,9 +312,16 @@ const MechanicDashboard = () => {
   // Submit requests
   const handleSubmitForApproval = async () => {
     try {
+      setSubmitLoading(true);
       const mechanicId = sessionStorage.getItem("userId");
       if (!mechanicId) {
-        enqueueSnackbar("User not authenticated", { variant: 'error' });
+        showNotification("User not authenticated", 'error');
+        return;
+      }
+
+      const selectedServiceObj = services.find((s) => s.id === selectedService);
+      if (!selectedServiceObj) {
+        showNotification("Selected service not found", 'error');
         return;
       }
 
@@ -310,15 +331,17 @@ const MechanicDashboard = () => {
         const totalPrice = (part?.price || 0) * p.quantity;
         console.log('Submitting request for part:', {
           sparePartId: p.id,
-          vehicleId: selectedVehicle,
+          vehicleId: selectedServiceObj.vehicle.id,
           mechanicId,
+          serviceId: selectedService,
           quantity: p.quantity,
           totalPrice,
         });
         await createSparePartRequest({
           sparePartId: p.id,
-          vehicleId: selectedVehicle,
+          vehicleId: selectedServiceObj.vehicle.id,
           mechanicId,
+          serviceId: selectedService,
           quantity: p.quantity,
           totalPrice,
         });
@@ -327,9 +350,9 @@ const MechanicDashboard = () => {
 
       // Update frontend state
       setSelectedParts([]);
-      setSelectedVehicle('');
+      setSelectedService('');
       setOpenConfirmDialog(false);
-      enqueueSnackbar("Spare parts request submitted for admin approval", { variant: 'success' });
+      showNotification("Spare parts request submitted for admin approval", 'success');
 
       // Refresh spare parts to reflect any changes
       const partsData = await fetchSpareParts();
@@ -345,8 +368,9 @@ const MechanicDashboard = () => {
       setSpareParts(sanitizedParts);
     } catch (error: any) {
       console.error('Error submitting spare part request:', error);
-      enqueueSnackbar(error.message || "Failed to submit request", { variant: 'error' });
-      setOpenConfirmDialog(false);
+      showNotification(error.message || "Failed to submit request", 'error');
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
@@ -376,7 +400,7 @@ const MechanicDashboard = () => {
     status: string
   ) => {
     if (status !== "Completed") {
-      enqueueSnackbar("Action not allowed. You can only mark tasks as completed.", { variant: 'warning' });
+      showNotification("Action not allowed. You can only mark tasks as completed.", 'error');
       return;
     }
 
@@ -387,9 +411,9 @@ const MechanicDashboard = () => {
           req.id === requestId ? updatedService : req
         )
       );
-      enqueueSnackbar("Task marked as completed!", { variant: 'success' });
+      showNotification("Task marked as completed!", 'success');
     } catch (error) {
-      enqueueSnackbar("Failed to update service", { variant: 'error' });
+      showNotification("Failed to update service", 'error');
     }
   };
 
@@ -405,14 +429,14 @@ const MechanicDashboard = () => {
         const data = await fetchRecentRequestsByMechanic(mechanicId);
         setRecentRequests(data.slice(0, 5)); // Show last 5
       } catch (err: any) {
-        enqueueSnackbar(err.message || "Failed to load recent requests", { variant: 'error' });
+        showNotification(err.message || "Failed to load recent requests", 'error');
       } finally {
         setLoadingRecent(false);
       }
     };
 
     loadRecentRequests();
-  }, []);
+  }, [showNotification]);
 
   // Pie chart data
   const pieChartData = {
@@ -610,7 +634,7 @@ const MechanicDashboard = () => {
       <CardContent>
         <Typography variant="h5" color="primary" gutterBottom>Spare Parts Request</Typography>
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          Select spare parts, specify quantities, and choose a vehicle for admin approval
+          Select spare parts, specify quantities, and choose a service for admin approval
         </Typography>
         
         <SparePartsTable
@@ -620,28 +644,28 @@ const MechanicDashboard = () => {
           handleQuantityChange={handleQuantityChange}
         />
 
-        {/* Vehicle Selection and Submit Button */}
+        {/* Service Selection and Submit Button */}
         <Box sx={{ mt: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
           <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel id="vehicle-select-label">Select Vehicle</InputLabel>
+            <InputLabel id="service-select-label">Select Service</InputLabel>
             <Select
-              labelId="vehicle-select-label"
-              value={selectedVehicle}
+              labelId="service-select-label"
+              value={selectedService}
               onChange={(e) => {
-                console.log('Selected vehicle:', e.target.value); // Debug log
-                setSelectedVehicle(e.target.value as string);
+                console.log('Selected service:', e.target.value); // Debug log
+                setSelectedService(e.target.value as string);
               }}
-              label="Select Vehicle"
-              disabled={vehicles.length === 0}
+              label="Select Service"
+              disabled={services.length === 0}
             >
-              {vehicles.length === 0 ? (
+              {services.length === 0 ? (
                 <MenuItem value="" disabled>
-                  No vehicles assigned
+                  No services assigned
                 </MenuItem>
               ) : (
-                vehicles.map((vehicle) => (
-                  <MenuItem key={vehicle.id} value={vehicle.id}>
-                    {vehicle.make} {vehicle.model} ({vehicle.plate})
+                services.map((service) => (
+                  <MenuItem key={service.id} value={service.id}>
+                    {service.description} ({service.vehicle.make} {service.vehicle.model} - {service.vehicle.plate})
                   </MenuItem>
                 ))
               )}
@@ -651,9 +675,9 @@ const MechanicDashboard = () => {
             variant="contained"
             color="primary"
             onClick={handleInitiateSubmission}
-            disabled={selectedParts.length === 0 || !selectedVehicle}
+            disabled={selectedParts.length === 0 || !selectedService || submitLoading}
           >
-            Review and Submit
+            {submitLoading ? 'Submitting...' : 'Review and Submit'}
           </Button>
         </Box>
         {/* Recent Requests Card */}
@@ -713,12 +737,13 @@ const MechanicDashboard = () => {
               </MuiTableBody>
             </MuiTable>
             <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-              Vehicle
+              Service
             </Typography>
             <Typography variant="body2">
-              {vehicles.find((v) => v.id === selectedVehicle)?.make}{' '}
-              {vehicles.find((v) => v.id === selectedVehicle)?.model}{' '}
-              ({vehicles.find((v) => v.id === selectedVehicle)?.plate})
+              {services.find((s) => s.id === selectedService)?.description}{' '}
+              ({services.find((s) => s.id === selectedService)?.vehicle.make}{' '}
+              {services.find((s) => s.id === selectedService)?.vehicle.model}{' '}
+              - {services.find((s) => s.id === selectedService)?.vehicle.plate})
             </Typography>
           </DialogContent>
           <DialogActions>
@@ -726,6 +751,7 @@ const MechanicDashboard = () => {
               onClick={() => setOpenConfirmDialog(false)}
               color="secondary"
               variant="outlined"
+              disabled={submitLoading}
             >
               Cancel
             </Button>
@@ -733,8 +759,9 @@ const MechanicDashboard = () => {
               onClick={handleSubmitForApproval}
               color="primary"
               variant="contained"
+              disabled={submitLoading}
             >
-              Submit for Approval
+              {submitLoading ? 'Submitting...' : 'Submit for Approval'}
             </Button>
           </DialogActions>
         </Dialog>
@@ -744,21 +771,7 @@ const MechanicDashboard = () => {
 
   const renderContent = () => {
     if (loading) {
-      return (
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '50vh',
-          flexDirection: 'column',
-          gap: 2,
-        }}>
-          <CircularProgress size={60} thickness={4} color="primary" />
-          <Typography variant="body1" color="text.secondary">
-            Loading your dashboard...
-          </Typography>
-        </Box>
-      );
+      return <Loading message="Loading your dashboard..." />;
     }
 
     switch (selectedPage) {
@@ -786,6 +799,12 @@ const MechanicDashboard = () => {
           <Container maxWidth="xl" sx={{ py: isMobile ? 0 : 2 }}>
             {renderContent()}
           </Container>
+          <Notification
+            open={notification.open}
+            message={notification.message}
+            type={notification.type}
+            onClose={() => setNotification({ ...notification, open: false })}
+          />
         </Box>
       </Box>
     </ThemeProvider>
