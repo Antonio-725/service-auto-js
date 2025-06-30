@@ -192,27 +192,6 @@ export const updateSparePartQuantity = async (id: string, reduceBy: number): Pro
 /**
  * Create a spare part request
  */
-// export const createSparePartRequest = async (
-//   data: {
-//     sparePartId: string;
-//     vehicleId: string;
-//     mechanicId: string;
-//     quantity: number;
-//     totalPrice: number;
-//   }
-// ): Promise<SparePartRequest> => {
-//   try {
-//     const response = await apiClient.post<{ message: string; request: SparePartRequest }>(
-//       REQUEST_API_URL,
-//       data
-//     );
-//     return response.data.request;
-//   } catch (error: any) {
-//     const errorMessage = error.response?.data?.message || 'Failed to create spare part request';
-//     throw new Error(errorMessage);
-//   }
-// };
-
 
 export const createSparePartRequest = async (request: {
   sparePartId: string;

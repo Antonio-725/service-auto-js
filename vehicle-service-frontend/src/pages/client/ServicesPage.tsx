@@ -21,15 +21,9 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Toolbar,
-  AppBar,
-  Tooltip,
   Rating,
   Fade,
   Divider,
-  CircularProgress,
-  Alert,
-  Snackbar,
   Table,
   TableHead,
   TableRow,
@@ -46,10 +40,10 @@ import {
   Delete,
   Receipt,
   Star,
-  ExitToApp as ExitToAppIcon,
-  CheckCircle,
   CalendarToday,
 } from "@mui/icons-material";
+import { CheckCircle } from "@mui/icons-material";
+import { CircularProgress } from "@mui/material";
 import {
   getVehicles,
   getVehicleById,
@@ -60,6 +54,8 @@ import {
   rateService,
   getInvoices,
 } from "../../utils/apiClient";
+import Loading from "../../components/usables/Loading";
+import Notification from "../../components/usables/Notification";
 
 interface Vehicle {
   id: string;
@@ -120,7 +116,6 @@ const ServicesPage = () => {
   const [vehicleData, setVehicleData] = useState({ make: "", model: "", year: "", plate: "" });
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
-  const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const [loading, setLoading] = useState({
     vehicles: false,
     services: false,
@@ -147,10 +142,14 @@ const ServicesPage = () => {
   const [openInvoiceDialog, setOpenInvoiceDialog] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    message: string;
+    type: "success" | "error";
+  }>({
     open: false,
     message: "",
-    severity: "success",
+    type: "success",
   });
 
   const token = sessionStorage.getItem("token");
@@ -176,10 +175,10 @@ const ServicesPage = () => {
         setServiceHistory(servicesData.filter((s: Service) => s.status !== "In Progress"));
       } catch (error: any) {
         console.error("Fetch error:", error);
-        setSnackbar({
+        setNotification({
           open: true,
           message: error.message || "Failed to load data. Please try again.",
-          severity: "error",
+          type: "error",
         });
       } finally {
         setLoading((prev) => ({ ...prev, vehicles: false, services: false }));
@@ -205,17 +204,17 @@ const ServicesPage = () => {
       setVehicles((prev) => [...prev, newVehicle]);
       setVehicleData({ make: "", model: "", year: "", plate: "" });
       setOpenVehicleDialog(false);
-      setSnackbar({
+      setNotification({
         open: true,
         message: "Vehicle added successfully!",
-        severity: "success",
+        type: "success",
       });
     } catch (error: any) {
       console.error("Add vehicle error:", error);
-      setSnackbar({
+      setNotification({
         open: true,
         message: error.message || "Failed to add vehicle. Please try again.",
-        severity: "error",
+        type: "error",
       });
     }
   };
@@ -231,17 +230,17 @@ const ServicesPage = () => {
         await deleteVehicle(selectedVehicle);
         setVehicles((prev) => prev.filter((v) => v.id !== selectedVehicle));
         setOpenDeleteDialog(false);
-        setSnackbar({
+        setNotification({
           open: true,
           message: "Vehicle deleted successfully!",
-          severity: "success",
+          type: "success",
         });
       } catch (error: any) {
         console.error("Delete vehicle error:", error);
-        setSnackbar({
+        setNotification({
           open: true,
           message: error.message || "Failed to delete vehicle. Please try again.",
-          severity: "error",
+          type: "error",
         });
       }
     }
@@ -252,23 +251,23 @@ const ServicesPage = () => {
       const updatedVehicle = await updateVehicle(editVehicleData.id, editVehicleData);
       setVehicles((prev) => prev.map((v) => (v.id === editVehicleData.id ? updatedVehicle : v)));
       setOpenEditDialog(false);
-      setSnackbar({
+      setNotification({
         open: true,
         message: "Vehicle updated successfully!",
-        severity: "success",
+        type: "success",
       });
     } catch (error: any) {
       console.error("Edit vehicle error:", error);
-      setSnackbar({
+      setNotification({
         open: true,
         message: error.message || "Failed to edit vehicle. Please try again.",
-        severity: "error",
+        type: "error",
       });
     }
   };
 
   const handleRequestService = (vehicleId: string) => {
-    navigate(`/book-service?vehicleId=${vehicleId}`);
+    navigate(`/book`);
   };
 
   const handleRateService = async () => {
@@ -284,9 +283,7 @@ const ServicesPage = () => {
         await rateService(selectedServiceToRate, payload);
         setServiceHistory((prev) =>
           prev.map((service) =>
-            service.id === selectedServiceToRate
-              ? { ...service, rating: ratingValue }
-              : service
+            service.id === selectedServiceToRate ? { ...service, rating: ratingValue } : service
           )
         );
         setRatingSuccess("Rating submitted successfully!");
@@ -326,19 +323,19 @@ const ServicesPage = () => {
         setOpenInvoiceDialog(true);
       } else {
         setInvoiceError("Invoice not found.");
-        setSnackbar({
+        setNotification({
           open: true,
           message: "Invoice not found.",
-          severity: "error",
+          type: "error",
         });
       }
     } catch (error: any) {
       console.error("Error fetching invoice:", error);
       setInvoiceError(error.message || "Failed to fetch invoice.");
-      setSnackbar({
+      setNotification({
         open: true,
         message: error.message || "Failed to fetch invoice.",
-        severity: "error",
+        type: "error",
       });
     } finally {
       setLoading((prev) => ({ ...prev, invoice: false }));
@@ -351,21 +348,6 @@ const ServicesPage = () => {
     setInvoiceError(null);
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("userId");
-    sessionStorage.removeItem("username");
-    navigate("/login");
-  };
-
-  const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorElUser(event.currentTarget);
-  };
-
-  const handleCloseUserMenu = () => {
-    setAnchorElUser(null);
-  };
-
   const handleViewVehicleDetails = async (vehicleId: string) => {
     try {
       const vehicle = await getVehicleById(vehicleId);
@@ -373,10 +355,10 @@ const ServicesPage = () => {
       setOpenDetailsDialog(true);
     } catch (error: any) {
       console.error("Error fetching vehicle details:", error);
-      setSnackbar({
+      setNotification({
         open: true,
         message: error.message || "Failed to fetch vehicle details.",
-        severity: "error",
+        type: "error",
       });
     }
   };
@@ -417,7 +399,6 @@ const ServicesPage = () => {
 
   return (
     <Box sx={{ flexGrow: 1, bgcolor: "#f5f5f7", minHeight: "100vh" }}>
-    
       {/* Main Content */}
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Fade in timeout={500}>
@@ -489,7 +470,10 @@ const ServicesPage = () => {
                 </Grid>
               </DialogContent>
               <DialogActions sx={{ p: 3 }}>
-                <Button onClick={() => setOpenVehicleDialog(false)} sx={{ textTransform: "none" }}>
+                <Button
+                  onClick={() => setOpenVehicleDialog(false)}
+                  sx={{ textTransform: "none" }}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -535,14 +519,20 @@ const ServicesPage = () => {
                     sx={{ mt: 2 }}
                   />
                   {ratingError && (
-                    <Alert severity="error" sx={{ mt: 2, width: "100%" }}>
-                      {ratingError}
-                    </Alert>
+                    <Notification
+                      open={!!ratingError}
+                      message={ratingError}
+                      type="error"
+                      onClose={() => setRatingError(null)}
+                    />
                   )}
                   {ratingSuccess && (
-                    <Alert severity="success" sx={{ mt: 2, width: "100%" }}>
-                      {ratingSuccess}
-                    </Alert>
+                    <Notification
+                      open={!!ratingSuccess}
+                      message={ratingSuccess}
+                      type="success"
+                      onClose={() => setRatingSuccess(null)}
+                    />
                   )}
                 </Box>
               </DialogContent>
@@ -583,10 +573,18 @@ const ServicesPage = () => {
               <DialogContent sx={{ pt: 3 }}>
                 {selectedVehicleDetails ? (
                   <Box>
-                    <Typography><strong>Make:</strong> {selectedVehicleDetails.make}</Typography>
-                    <Typography><strong>Model:</strong> {selectedVehicleDetails.model}</Typography>
-                    <Typography><strong>Year:</strong> {selectedVehicleDetails.year}</Typography>
-                    <Typography><strong>Plate:</strong> {selectedVehicleDetails.plate}</Typography>
+                    <Typography>
+                      <strong>Make:</strong> {selectedVehicleDetails.make}
+                    </Typography>
+                    <Typography>
+                      <strong>Model:</strong> {selectedVehicleDetails.model}
+                    </Typography>
+                    <Typography>
+                      <strong>Year:</strong> {selectedVehicleDetails.year}
+                    </Typography>
+                    <Typography>
+                      <strong>Plate:</strong> {selectedVehicleDetails.plate}
+                    </Typography>
                   </Box>
                 ) : (
                   <Typography>No details found.</Typography>
@@ -652,7 +650,9 @@ const ServicesPage = () => {
                 <Button
                   variant="contained"
                   onClick={handleEditVehicle}
-                  disabled={!editVehicleData.make || !editVehicleData.model || !editVehicleData.year || !editVehicleData.plate}
+                  disabled={
+                    !editVehicleData.make || !editVehicleData.model || !editVehicleData.year || !editVehicleData.plate
+                  }
                   sx={{
                     textTransform: "none",
                     px: 3,
@@ -671,9 +671,7 @@ const ServicesPage = () => {
                 Confirm Delete
               </DialogTitle>
               <DialogContent sx={{ pt: 3 }}>
-                <Typography>
-                  Are you sure you want to delete this vehicle? This action cannot be undone.
-                </Typography>
+                <Typography>Are you sure you want to delete this vehicle? This action cannot be undone.</Typography>
               </DialogContent>
               <DialogActions sx={{ p: 3 }}>
                 <Button onClick={() => setOpenDeleteDialog(false)} sx={{ textTransform: "none" }}>
@@ -725,11 +723,14 @@ const ServicesPage = () => {
               </Box>
               <DialogContent sx={{ p: 3, bgcolor: "#ffffff" }}>
                 {loading.invoice ? (
-                  <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-                    <CircularProgress />
-                  </Box>
+                  <Loading message="Fetching invoice details..." />
                 ) : invoiceError ? (
-                  <Alert severity="error">{invoiceError}</Alert>
+                  <Notification
+                    open={!!invoiceError}
+                    message={invoiceError}
+                    type="error"
+                    onClose={() => setInvoiceError(null)}
+                  />
                 ) : selectedInvoice ? (
                   <Box>
                     <Box
@@ -847,21 +848,13 @@ const ServicesPage = () => {
               </DialogActions>
             </Dialog>
 
-            {/* Snackbar for Feedback */}
-            <Snackbar
-              open={snackbar.open}
-              autoHideDuration={6000}
-              onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-              anchorOrigin={{ vertical: "top", horizontal: "center" }}
-            >
-              <Alert
-                severity={snackbar.severity}
-                sx={{ width: "100%" }}
-                onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-              >
-                {snackbar.message}
-              </Alert>
-            </Snackbar>
+            {/* Notification for Feedback */}
+            <Notification
+              open={notification.open}
+              message={notification.message}
+              type={notification.type}
+              onClose={() => setNotification((prev) => ({ ...prev, open: false }))}
+            />
 
             {/* My Vehicles Section */}
             <Fade in timeout={700}>
@@ -875,9 +868,7 @@ const ServicesPage = () => {
                   </Typography>
                 </Box>
                 {loading.vehicles ? (
-                  <Box display="flex" justifyContent="center" py={4}>
-                    <CircularProgress />
-                  </Box>
+                  <Loading message="Fetching vehicles..." />
                 ) : vehicles.length === 0 ? (
                   <Box textAlign="center" py={4}>
                     <Typography variant="body1" color="text.secondary">
@@ -960,9 +951,7 @@ const ServicesPage = () => {
                   </Typography>
                 </Box>
                 {loading.services ? (
-                  <Box display="flex" justifyContent="center" py={4}>
-                    <CircularProgress />
-                  </Box>
+                  <Loading message="Fetching services..." />
                 ) : currentServices.length === 0 ? (
                   <Box textAlign="center" py={4}>
                     <Typography variant="body1" color="text.secondary">
@@ -1025,7 +1014,6 @@ const ServicesPage = () => {
             </Fade>
 
             {/* Service History Section */}
-            {/* Service History Section */}
             <Fade in timeout={1100}>
               <Paper sx={{ p: 3, mb: 4, borderRadius: 3, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
                 <Box display="flex" alignItems="center" mb={3}>
@@ -1037,9 +1025,7 @@ const ServicesPage = () => {
                   </Typography>
                 </Box>
                 {loading.services ? (
-                  <Box display="flex" justifyContent="center" py={4}>
-                    <CircularProgress />
-                  </Box>
+                  <Loading message="Fetching service history..." />
                 ) : serviceHistory.length === 0 ? (
                   <Box textAlign="center" py={4}>
                     <Typography variant="body1" color="text.secondary">
@@ -1050,14 +1036,16 @@ const ServicesPage = () => {
                   <Grid container spacing={3}>
                     {serviceHistory.map((service) => (
                       <Grid item xs={12} sm={6} md={4} key={service.id}>
-                        <Card sx={{ 
-                          borderRadius: 3,
-                          transition: "transform 0.3s, box-shadow 0.3s",
-                          "&:hover": {
-                            transform: "translateY(-4px)",
-                            boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-                          },
-                        }}>
+                        <Card
+                          sx={{
+                            borderRadius: 3,
+                            transition: "transform 0.3s, box-shadow 0.3s",
+                            "&:hover": {
+                              transform: "translateY(-4px)",
+                              boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+                            },
+                          }}
+                        >
                           <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center">
                               <Box>
@@ -1178,12 +1166,22 @@ const ServicesPage = () => {
             {/* Add global animations */}
             <style jsx global>{`
               @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
+                from {
+                  opacity: 0;
+                }
+                to {
+                  opacity: 1;
+                }
               }
               @keyframes slideUp {
-                from { transform: translateY(20px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
+                from {
+                  transform: translateY(20px);
+                  opacity: 0;
+                }
+                to {
+                  transform: translateY(0);
+                  opacity: 1;
+                }
               }
               .MuiDialog-paper {
                 animation: slideUp 0.3s ease-out;

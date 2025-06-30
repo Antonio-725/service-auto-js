@@ -6,7 +6,8 @@ const { authenticate } = require('../middleware/auth');
 const { 
   createService, 
   getUserServices, 
-  getAllServicedVehicles, 
+  getAllServicedVehicles,
+  getCompletedServicesWithoutInvoices, 
   updateServiceAssignment,
   getAssignedServicesToMechanic,
   rateService // ← Add this
@@ -15,6 +16,7 @@ const {
 router.post('/', authenticate, createService);
 router.get('/', authenticate, getUserServices);
 router.get('/all-vehicles', authenticate, getAllServicedVehicles);
+router.get('/completed-without-invoice', authenticate, getCompletedServicesWithoutInvoices);
 router.get('/mechanic', authenticate, getAssignedServicesToMechanic);
 router.put('/:serviceId/assign', authenticate, updateServiceAssignment);
 

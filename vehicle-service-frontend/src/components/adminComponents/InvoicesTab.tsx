@@ -17,23 +17,23 @@ import {
   TextField,
   Paper,
   Divider,
-  CircularProgress,
-  Snackbar,
-  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Grid,
   Chip,
+  TableContainer,
 } from '@mui/material';
-import { fetchServices } from '../../services/serviceApi';
+import { fetchCompletedServicesWithoutInvoice } from '../../services/serviceApi';
 import {
   getSparePartRequests,
   createInvoice,
   getInvoices,
   deleteInvoice,
 } from '../../utils/apiClient';
+import Notification from '../usables/Notification';
+import Loading from '../usables/Loading';
 import type { Service, SparePart, SparePartRequest, InvoiceItem, Invoice } from '../../types/invoicetab';
 
 interface State {
@@ -48,11 +48,7 @@ interface State {
   selectedInvoice: Invoice | null;
   saveLoading: boolean;
   deleteLoading: boolean;
-  snackbar: {
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'warning' | 'info';
-  };
+  notification: { open: boolean; message: string; type: 'success' | 'error' | 'warning' | 'info' };
 }
 
 type Action =
@@ -67,7 +63,7 @@ type Action =
   | { type: 'SET_SELECTED_INVOICE'; payload: Invoice | null }
   | { type: 'SET_SAVE_LOADING'; payload: boolean }
   | { type: 'SET_DELETE_LOADING'; payload: boolean }
-  | { type: 'SET_SNACKBAR'; payload: State['snackbar'] };
+  | { type: 'SET_NOTIFICATION'; payload: State['notification'] };
 
 const initialState: State = {
   services: [],
@@ -81,7 +77,7 @@ const initialState: State = {
   selectedInvoice: null,
   saveLoading: false,
   deleteLoading: false,
-  snackbar: { open: false, message: '', severity: 'success' },
+  notification: { open: false, message: '', type: 'success' },
 };
 
 const reducer = (state: State, action: Action): State => {
@@ -108,8 +104,8 @@ const reducer = (state: State, action: Action): State => {
       return { ...state, saveLoading: action.payload };
     case 'SET_DELETE_LOADING':
       return { ...state, deleteLoading: action.payload };
-    case 'SET_SNACKBAR':
-      return { ...state, snackbar: action.payload };
+    case 'SET_NOTIFICATION':
+      return { ...state, notification: action.payload };
     default:
       return state;
   }
@@ -117,11 +113,11 @@ const reducer = (state: State, action: Action): State => {
 
 const InvoicesTab: React.FC = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { services, selectedService, spareParts, laborCost, tax, loading, invoices, editModal, selectedInvoice, saveLoading, deleteLoading, snackbar } = state;
+  const { services, selectedService, spareParts, laborCost, tax, loading, invoices, editModal, selectedInvoice, saveLoading, deleteLoading, notification } = state;
 
-  const showSnackbar = useCallback(
-    (message: string, severity: 'success' | 'error' | 'warning' | 'info') => {
-      dispatch({ type: 'SET_SNACKBAR', payload: { open: true, message, severity } });
+  const showNotification = useCallback(
+    (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+      dispatch({ type: 'SET_NOTIFICATION', payload: { open: true, message, type } });
     },
     []
   );
@@ -138,60 +134,60 @@ const InvoicesTab: React.FC = () => {
     const vehicle = invoice.service?.vehicle || invoice.vehicle;
     if (!vehicle) return 'N/A';
     if (vehicle.name) return vehicle.name;
-    if (vehicle.make && vehicle.model) return `${vehicle.make} ${vehicle.model}`;
-    if (vehicle.plate) return vehicle.plate; // Updated from licensePlate to plate
+    if (vehicle.make && vehicle.model) return `${vehicle.make} ${vehicle.model} (${vehicle.plate})`;
+    if (vehicle.plate) return vehicle.plate;
     return vehicle.id.slice(0, 8);
   }, []);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [servicesData, invoicesData] = await Promise.all([fetchServices(), getInvoices()]);
-        const completedServices = servicesData.filter(
-          (s: Service) => s.status === 'Completed' && !s.invoiceId
-        );
-        dispatch({ type: 'SET_SERVICES', payload: completedServices });
+        dispatch({ type: 'SET_LOADING', payload: true });
+        const [servicesData, invoicesData] = await Promise.all([fetchCompletedServicesWithoutInvoice(), getInvoices()]);
+        dispatch({ type: 'SET_SERVICES', payload: servicesData });
         dispatch({ type: 'SET_INVOICES', payload: invoicesData });
       } catch (error: unknown) {
         console.error('Error loading data:', (error as Error).message);
-        showSnackbar('Failed to load data', 'error');
+        showNotification('Failed to load data', 'error');
+      } finally {
+        dispatch({ type: 'SET_LOADING', payload: false });
       }
     };
     loadData();
-  }, [showSnackbar]);
+  }, [showNotification]);
 
-const handleServiceChange = useCallback(async (serviceId: string) => {
-  const service = services.find((s) => s.id === serviceId);
-  if (!service) return;
-  
-  dispatch({ type: 'SET_SELECTED_SERVICE', payload: service });
-  dispatch({ type: 'SET_SPARE_PARTS', payload: [] });
-  dispatch({ type: 'SET_LABOR_COST', payload: 0 });
-  dispatch({ type: 'SET_TAX', payload: 0 });
+  const handleServiceChange = useCallback(async (serviceId: string) => {
+    const service = services.find((s) => s.id === serviceId);
+    if (!service) return;
 
-  try {
-    const allParts = await getSparePartRequests(service.id); // Use service.id instead of vehicle.id and createdAt
-    const relatedParts = allParts
-      .filter((part: SparePartRequest) => part.status === 'Approved') // Keep status filter
-      .map((part: SparePartRequest) => ({
-        id: part.id,
-        partName: part.sparePart?.name || 'Unnamed',
-        quantity: part.quantity,
-        unitPrice: part.sparePart?.price || 0,
-        status: part.status,
-        vehicleId: part.vehicleId,
-        createdAt: part.createdAt,
-      }));
-    dispatch({ type: 'SET_SPARE_PARTS', payload: relatedParts });
-  } catch (error: unknown) {
-    console.error('Error loading parts:', (error as Error).message);
-    showSnackbar('Failed to load spare parts', 'error');
-  }
-}, [services, showSnackbar]);
+    dispatch({ type: 'SET_SELECTED_SERVICE', payload: service });
+    dispatch({ type: 'SET_SPARE_PARTS', payload: [] });
+    dispatch({ type: 'SET_LABOR_COST', payload: 0 });
+    dispatch({ type: 'SET_TAX', payload: 0 });
+
+    try {
+      const allParts = await getSparePartRequests(service.id);
+      const relatedParts = allParts
+        .filter((part: SparePartRequest) => part.status === 'Approved')
+        .map((part: SparePartRequest) => ({
+          id: part.id,
+          partName: part.sparePart?.name || 'Unnamed',
+          quantity: part.quantity,
+          unitPrice: part.sparePart?.price || 0,
+          status: part.status,
+          vehicleId: part.vehicleId,
+          createdAt: part.createdAt,
+        }));
+      dispatch({ type: 'SET_SPARE_PARTS', payload: relatedParts });
+    } catch (error: unknown) {
+      console.error('Error loading parts:', (error as Error).message);
+      showNotification('Failed to load spare parts', 'error');
+    }
+  }, [services, showNotification]);
 
   const handleCreateInvoice = useCallback(async () => {
     if (!selectedService) return;
-    
+
     const partsCost = spareParts.reduce(
       (total, part) => total + part.quantity * part.unitPrice,
       0
@@ -219,18 +215,18 @@ const handleServiceChange = useCallback(async (serviceId: string) => {
 
       dispatch({ type: 'SET_SERVICES', payload: services.filter(s => s.id !== selectedService.id) });
       dispatch({ type: 'SET_INVOICES', payload: [{ ...newInvoice, service: selectedService, vehicle: selectedService.vehicle }, ...invoices] });
-      showSnackbar('Invoice created successfully', 'success');
-      
+      showNotification('Invoice created successfully', 'success');
+
       dispatch({ type: 'SET_SELECTED_SERVICE', payload: null });
       dispatch({ type: 'SET_SPARE_PARTS', payload: [] });
       dispatch({ type: 'SET_LABOR_COST', payload: 0 });
       dispatch({ type: 'SET_TAX', payload: 0 });
     } catch (error: unknown) {
-      showSnackbar((error as Error).message || 'Failed to create invoice', 'error');
+      showNotification((error as Error).message || 'Failed to create invoice', 'error');
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [selectedService, spareParts, laborCost, tax, services, invoices, showSnackbar]);
+  }, [selectedService, spareParts, laborCost, tax, services, invoices, showNotification]);
 
   const handleEditClick = useCallback((invoice: Invoice) => {
     dispatch({ type: 'SET_SELECTED_INVOICE', payload: invoice });
@@ -244,7 +240,6 @@ const handleServiceChange = useCallback(async (serviceId: string) => {
       dispatch({ type: 'SET_SAVE_LOADING', payload: true });
       await updateInvoiceStatus(selectedInvoice.id, selectedInvoice.status as 'Draft' | 'Sent' | 'Paid' | 'Overdue');
 
-      // Trigger email if status is changed to 'Sent'
       if (selectedInvoice.status === 'Sent') {
         try {
           const ownerEmail = selectedInvoice.user?.email;
@@ -252,15 +247,15 @@ const handleServiceChange = useCallback(async (serviceId: string) => {
             throw new Error('Owner email not found');
           }
           await sendInvoiceEmail(selectedInvoice.id, { recipientEmail: ownerEmail });
-          showSnackbar('Invoice updated and email sent successfully', 'success');
+          showNotification('Invoice updated and email sent successfully', 'success');
         } catch (emailError: unknown) {
-          showSnackbar(
+          showNotification(
             'Invoice updated but failed to send email: ' + ((emailError as Error).message || 'Unknown error'),
             'warning'
           );
         }
       } else {
-        showSnackbar('Invoice updated successfully', 'success');
+        showNotification('Invoice updated successfully', 'success');
       }
 
       dispatch({
@@ -271,11 +266,11 @@ const handleServiceChange = useCallback(async (serviceId: string) => {
       });
       dispatch({ type: 'SET_EDIT_MODAL', payload: false });
     } catch (error: unknown) {
-      showSnackbar((error as Error).message || 'Failed to update invoice', 'error');
+      showNotification((error as Error).message || 'Failed to update invoice', 'error');
     } finally {
       dispatch({ type: 'SET_SAVE_LOADING', payload: false });
     }
-  }, [selectedInvoice, invoices, showSnackbar]);
+  }, [selectedInvoice, invoices, showNotification]);
 
   const handleDeleteInvoice = useCallback(async () => {
     if (!selectedInvoice) return;
@@ -293,14 +288,14 @@ const handleServiceChange = useCallback(async (serviceId: string) => {
         dispatch({ type: 'SET_SERVICES', payload: [...services, restoredService] });
       }
 
-      showSnackbar('Invoice deleted successfully', 'warning');
+      showNotification('Invoice deleted successfully', 'warning');
       dispatch({ type: 'SET_EDIT_MODAL', payload: false });
     } catch (error: unknown) {
-      showSnackbar((error as Error).message || 'Failed to delete invoice', 'error');
+      showNotification((error as Error).message || 'Failed to delete invoice', 'error');
     } finally {
       dispatch({ type: 'SET_DELETE_LOADING', payload: false });
     }
-  }, [selectedInvoice, invoices, services, showSnackbar]);
+  }, [selectedInvoice, invoices, services, showNotification]);
 
   return (
     <Box p={3} className="invoices-container">
@@ -308,16 +303,21 @@ const handleServiceChange = useCallback(async (serviceId: string) => {
         Create Invoice
       </Typography>
 
+      {loading && <Loading message="Loading services..." />}
+
       <FormControl fullWidth sx={{ mb: 2 }} className="invoices-form-control">
-        <InputLabel>Completed Services</InputLabel>
+        <InputLabel>Completed Services (No Invoice)</InputLabel>
         <Select
           value={selectedService?.id || ''}
           onChange={(e) => handleServiceChange(e.target.value as string)}
-          label="Completed Services"
+          label="Completed Services (No Invoice)"
         >
+          {services.length === 0 && (
+            <MenuItem disabled>No services available</MenuItem>
+          )}
           {services.map((service) => (
             <MenuItem key={service.id} value={service.id}>
-              {service.description} ({service.date})
+              {`${service.description} - ${service.vehicle.make} ${service.vehicle.model} (${service.vehicle.plate}) - ${new Date(service.date).toLocaleDateString()}`}
             </MenuItem>
           ))}
         </Select>
@@ -376,7 +376,7 @@ const handleServiceChange = useCallback(async (serviceId: string) => {
             disabled={loading}
             className="invoices-generate-btn"
           >
-            {loading ? <CircularProgress size={24} /> : 'Generate Invoice'}
+            {loading ? <Loading message="" /> : 'Generate Invoice'}
           </Button>
         </Paper>
       )}
@@ -384,45 +384,58 @@ const handleServiceChange = useCallback(async (serviceId: string) => {
       <Typography variant="h5" gutterBottom className="invoices-header">
         Existing Invoices
       </Typography>
-      <Table className="invoices-table">
-        <TableHead>
-          <TableRow>
-            <TableCell>Invoice Ref</TableCell>
-            <TableCell>Service ID</TableCell>
-            <TableCell>Vehicle</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Created At</TableCell>
-            <TableCell>Total Amount (KES)</TableCell>
-            <TableCell>Action</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {invoices.map((inv) => (
-            <TableRow key={inv.id}>
-              <TableCell>{inv.id.slice(0, 8)}</TableCell>
-              <TableCell>{inv.serviceId.slice(0, 8)}</TableCell>
-              <TableCell>{getVehicleName(inv)}</TableCell>
-              <TableCell>
-                <span className={`invoices-status invoices-status-${inv.status.toLowerCase()}`}>
-                  {inv.status}
-                </span>
-              </TableCell>
-              <TableCell>{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
-              <TableCell>{Number(inv.totalAmount).toFixed(2)}</TableCell>
-              <TableCell>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => handleEditClick(inv)}
-                  className="invoices-edit-btn"
-                >
-                  Edit
-                </Button>
-              </TableCell>
+      
+      <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 400px)', overflow: 'auto' }}>
+        <Table stickyHeader className="invoices-table">
+          <TableHead>
+            <TableRow>
+              <TableCell>Invoice Ref</TableCell>
+              <TableCell>Service ID</TableCell>
+              <TableCell>Vehicle</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Created At</TableCell>
+              <TableCell>Total Amount (KES)</TableCell>
+              <TableCell>Action</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHead>
+          <TableBody>
+            {invoices.map((inv) => (
+              <TableRow key={inv.id} hover>
+                <TableCell>{inv.id.slice(0, 8)}</TableCell>
+                <TableCell>{inv.serviceId.slice(0, 8)}</TableCell>
+                <TableCell>{getVehicleName(inv)}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={inv.status}
+                    color={
+                      inv.status === 'Paid'
+                        ? 'success'
+                        : inv.status === 'Sent'
+                        ? 'info'
+                        : inv.status === 'Overdue'
+                        ? 'error'
+                        : 'default'
+                    }
+                    sx={{ textTransform: 'capitalize' }}
+                  />
+                </TableCell>
+                <TableCell>{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
+                <TableCell>{Number(inv.totalAmount).toFixed(2)}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleEditClick(inv)}
+                    className="invoices-edit-btn"
+                  >
+                    Edit
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       <Dialog
         open={editModal}
@@ -522,7 +535,7 @@ const handleServiceChange = useCallback(async (serviceId: string) => {
             onClick={handleDeleteInvoice}
             disabled={deleteLoading || saveLoading}
           >
-            {deleteLoading ? <CircularProgress size={24} /> : 'Delete'}
+            {deleteLoading ? <Loading message="" /> : 'Delete'}
           </Button>
           <Button
             onClick={() => dispatch({ type: 'SET_EDIT_MODAL', payload: false })}
@@ -535,24 +548,17 @@ const handleServiceChange = useCallback(async (serviceId: string) => {
             onClick={handleEditSave}
             disabled={saveLoading || deleteLoading}
           >
-            {saveLoading ? <CircularProgress size={24} /> : 'Save'}
+            {saveLoading ? <Loading message="" /> : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => dispatch({ type: 'SET_SNACKBAR', payload: { ...snackbar, open: false } })}
-      >
-        <Alert
-          onClose={() => dispatch({ type: 'SET_SNACKBAR', payload: { ...snackbar, open: false } })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      <Notification
+        open={notification.open}
+        message={notification.message}
+        type={notification.type}
+        onClose={() => dispatch({ type: 'SET_NOTIFICATION', payload: { ...notification, open: false } })}
+      />
     </Box>
   );
 };

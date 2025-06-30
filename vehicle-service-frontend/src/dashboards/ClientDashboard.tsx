@@ -1,4 +1,3 @@
-// src/dashboards/DashboardLayout.tsx
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import {
@@ -15,25 +14,33 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   Notifications as NotificationsIcon,
   Menu as MenuIcon,
-  ExitToApp as ExitToAppIcon
+  ExitToApp as ExitToAppIcon,
 } from "@mui/icons-material";
 import Sidebar from "../components/Sidebar";
 
 const DashboardLayout = () => {
   const [activePage, setActivePage] = useState("services");
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md")); // Breakpoint for mobile (below medium screens)
 
   const username = sessionStorage.getItem("username") || "User";
 
   const handlePageChange = (page: string) => {
     setActivePage(page);
     navigate(`/${page}`);
+    if (isMobile) {
+      setMobileOpen(false); // Close sidebar on mobile after navigation
+    }
   };
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -51,6 +58,10 @@ const DashboardLayout = () => {
     navigate("/login");
   };
 
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
@@ -60,20 +71,23 @@ const DashboardLayout = () => {
           zIndex: (theme) => theme.zIndex.drawer + 1,
           backgroundColor: "#ffffff",
           color: "#2a3e78",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
         }}
       >
         <Toolbar>
           <IconButton
             color="inherit"
             edge="start"
-            sx={{ mr: 2 }}
+            onClick={handleDrawerToggle}
+            sx={{ mr: 2, display: { md: "none" } }} // Show hamburger menu only on mobile
           >
             <MenuIcon />
           </IconButton>
-
+          <Typography variant="h6" noWrap sx={{ flexGrow: 1, fontWeight: "bold" }}>
+            AutoCare Hub
+          </Typography>
           <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Typography variant="body1" sx={{ mr: 2 }}>
+            <Typography variant="body1" sx={{ mr: 2, display: { xs: "none", sm: "block" } }}>
               Welcome, {username}!
             </Typography>
             <IconButton color="inherit">
@@ -106,14 +120,21 @@ const DashboardLayout = () => {
           </Box>
         </Toolbar>
       </AppBar>
-      <Sidebar activePage={activePage} onPageChange={handlePageChange} />
+      <Sidebar
+        activePage={activePage}
+        onPageChange={handlePageChange}
+        mobileOpen={mobileOpen}
+        onDrawerToggle={handleDrawerToggle}
+        isMobile={isMobile}
+      />
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           bgcolor: "#f5f7fa",
-          p: 3,
-          minHeight: "100vh"
+          p: { xs: 2, md: 3 },
+          minHeight: "100vh",
+          width: { md: `calc(100% - ${240}px)` }, // Adjust width for permanent sidebar on desktop
         }}
       >
         <Toolbar />

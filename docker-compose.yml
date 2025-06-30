@@ -1,0 +1,21 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  backend:
+    build: ./vehicle-service-server
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./vehicle-service-server:/app
+    depends_on:
+      - frontend
+
+  frontend:
+    build: ./vehicle-service-frontend
+    ports:
+      - "5173:80" # Vite dev port mapped to nginx
+    volumes:
+      - ./vehicle-service-frontend:/app

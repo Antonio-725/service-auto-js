@@ -1,10 +1,10 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import {
-  Container, Grid, Card, CardContent, Typography, Divider, Box,
-  CssBaseline, Chip, Avatar, Paper, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Button, Checkbox, Select,
-  MenuItem, FormControl, InputLabel, TextField, Dialog, DialogTitle,useMediaQuery,
+  Container, Grid, Card, CardContent, Typography, Box,
+  CssBaseline, Chip, Avatar, Paper,
+   Button,  Select,
+  MenuItem, FormControl, InputLabel, Dialog, DialogTitle,useMediaQuery,
   DialogContent, DialogActions, Table as MuiTable, TableHead as MuiTableHead,
   TableBody as MuiTableBody, TableRow as MuiTableRow, TableCell as MuiTableCell
 } from "@mui/material";
@@ -140,9 +140,9 @@ const theme = createTheme({
 interface SparePart {
   id: string;
   name: string;
-  price?: number;
-  quantity?: number;
-  picture?: string;
+  price: number | null | undefined; // Allow null
+  quantity: number | null | undefined; // Allow null
+  picture: string | undefined;
   criticalLevel: boolean;
 }
 

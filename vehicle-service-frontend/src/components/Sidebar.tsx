@@ -1,20 +1,36 @@
 import {
-  Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
-  Toolbar, Divider, Box, Avatar, Typography,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Toolbar,
+  Divider,
+  Box,
+  Avatar,
+  Typography,
 } from "@mui/material";
 import {
-  DirectionsCar as ServicesIcon, CalendarMonth as BookIcon, Receipt as PaymentsIcon,
-  Notifications as NotificationsIcon, AccountCircle as ProfileIcon, SupportAgent as SupportIcon,
+  DirectionsCar as ServicesIcon,
+  CalendarMonth as BookIcon,
+  Receipt as PaymentsIcon,
+  Notifications as NotificationsIcon,
+  AccountCircle as ProfileIcon,
+  SupportAgent as SupportIcon,
 } from "@mui/icons-material";
 
 interface SidebarProps {
   activePage: string;
   onPageChange: (page: string) => void;
+  mobileOpen: boolean;
+  onDrawerToggle: () => void;
+  isMobile: boolean;
 }
 
 const drawerWidth = 240;
 
-const Sidebar: React.FC<SidebarProps> = ({ activePage, onPageChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activePage, onPageChange, mobileOpen, onDrawerToggle, isMobile }) => {
   const menuItems = [
     { text: "My Services", icon: <ServicesIcon />, page: "services", path: "/services" },
     { text: "Book a Service", icon: <BookIcon />, page: "book", path: "/book" },
@@ -24,20 +40,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onPageChange }) => {
     { text: "Support", icon: <SupportIcon />, page: "support", path: "/support" },
   ];
 
-  return (
-    <Drawer
-      variant="permanent"
-      sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        [`& .MuiDrawer-paper`]: {
-          width: drawerWidth,
-          boxSizing: "border-box",
-          backgroundColor: "#2a3e78",
-          color: "white",
-        },
-      }}
-    >
+  const drawerContent = (
+    <>
       <Toolbar>
         <Box display="flex" alignItems="center" p={2}>
           <Avatar sx={{ bgcolor: "#4caf50", mr: 2 }}>C</Avatar>
@@ -65,12 +69,43 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onPageChange }) => {
               <ListItemIcon sx={{ color: "white", minWidth: 40 }}>
                 {item.icon}
               </ListItemIcon>
-              <ListItemText primary={item.text} primaryTypographyProps={{ fontWeight: activePage === item.page ? "bold" : "medium" }} />
+              <ListItemText
+                primary={item.text}
+                primaryTypographyProps={{ fontWeight: activePage === item.page ? "bold" : "medium" }}
+              />
             </ListItemButton>
           </ListItem>
         ))}
       </List>
-    </Drawer>
+    </>
+  );
+
+  return (
+    <>
+      <Drawer
+        variant={isMobile ? "temporary" : "permanent"}
+        open={isMobile ? mobileOpen : true}
+        onClose={onDrawerToggle}
+        sx={{
+          width: drawerWidth,
+          flexShrink: 0,
+          zIndex: (theme) => theme.zIndex.drawer + 2, // Ensure above AppBar
+          display: { xs: "block", md: "block" },
+          [`& .MuiDrawer-paper`]: {
+            width: drawerWidth,
+            boxSizing: "border-box",
+            backgroundColor: "#2a3e78",
+            color: "white",
+            zIndex: (theme) => theme.zIndex.drawer + 2,
+          },
+        }}
+        ModalProps={{
+          keepMounted: true, // Better performance on mobile
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+    </>
   );
 };
 
