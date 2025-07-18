@@ -1,4 +1,3 @@
-// migrations/YYYYMMDDHHMMSS-add-invoiceId-to-services.js
 'use strict';
 
 module.exports = {
@@ -10,6 +9,7 @@ module.exports = {
         model: 'Invoices',
         key: 'id',
       },
+      onUpdate: 'CASCADE',
       onDelete: 'SET NULL',
     });
   },

@@ -49,34 +49,6 @@ export interface SparePartRequest {
   };
 }
 
-// export interface SparePartRequest {
-//   id: string;
-//   sparePartId: string;
-//   vehicleId: string;
-//   mechanicId: string;
-//   quantity: number;
-//   totalPrice: number;
-//   status: 'Pending' | 'Approved' | 'Rejected';
-//   createdAt: string;
-//   updatedAt: string;
-//   sparePart?: {
-//     id: string;
-//     name: string;
-//     price: number;
-//     quantity: number;
-//   };
-//   vehicle?: {
-//     id: string;
-//     make: string;
-//     model: string;
-//     plate: string;
-//   };
-//   mechanic?: {
-//     id: string;
-//     username: string;
-//     email: string;
-//   };
-// }
 
 const API_URL = '/api/spare-parts';
 const REQUEST_API_URL = '/api/spare-part-requests';

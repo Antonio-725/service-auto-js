@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -13,7 +14,7 @@ import { login } from "../../utils/apiClient";
 import { useAuth } from "../../context/AuthContext";
 
 const Login = () => {
-  const { refreshAuthState } = useAuth(); // ✅ Get the refresh function
+  const { refreshAuthState } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,65 +28,51 @@ const Login = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError("");
-  setIsLoading(true);
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
-  if (!validateEmail(email)) {
-    setError("Please enter a valid email address");
-    setIsLoading(false);
-    return;
-  }
-
-  if (password.length < 4) {
-    setError("Password must be at least 6 characters");
-    setIsLoading(false);
-    return;
-  }
-
-  try {
-    const res = await login(email, password); // ✅ API call to backend
-
-    // ✅ Save user data to localStorage
-
-    sessionStorage.setItem("token", res.token);
-    sessionStorage.setItem("role", res.role);
-    sessionStorage.setItem("userId", res.id);
-    sessionStorage.setItem("username", res.username);
-
-    refreshAuthState(); // ✅ Refresh auth context
-
-    switch (res.role) {
-      case "admin":
-        navigate("/admin");
-        break;
-      case "mechanic":
-        navigate("/mechanic");
-        break;
-      case "client":
-      case "user": // ✅ Unified redirect for both roles
-        navigate("/otp");
-        break;
-      default:
-        setError("Unauthorized role");
+    if (!validateEmail(email)) {
+      setError("Please enter a valid email address");
+      setIsLoading(false);
+      return;
     }
-  } catch (err: any) {
-    setError(err.message || "Invalid credentials");
-  } finally {
-    setIsLoading(false);
-  }
-};
 
-  // Simulated login API (placeholder)
-  const fakeLogin = (email: string, password: string) => {
-    return new Promise<{ token: string; role: string }>((resolve, reject) => {
-      setTimeout(() => {
-        if (email.includes("admin")) resolve({ token: "admin-token", role: "admin" });
-        else if (email.includes("mech")) resolve({ token: "mech-token", role: "mechanic" });
-        else if (email.includes("client")) resolve({ token: "client-token", role: "client" });
-        else reject("Invalid");
-      }, 1000);
-    });
+    if (password.length < 4) {
+      setError("Password must be at least 4 characters");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const res = await login(email, password);
+
+      sessionStorage.setItem("token", res.token);
+      sessionStorage.setItem("role", res.role);
+      sessionStorage.setItem("userId", res.id);
+      sessionStorage.setItem("username", res.username);
+
+      refreshAuthState();
+
+      switch (res.role) {
+        case "admin":
+          navigate("/admin");
+          break;
+        case "mechanic":
+          navigate("/mechanic");
+          break;
+        case "client":
+        case "user":
+          navigate("/otp");
+          break;
+        default:
+          setError("Unauthorized role");
+      }
+    } catch (err: any) {
+      setError(err.message || "Invalid credentials");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -128,7 +115,7 @@ const Login = () => {
             {isLoading ? <CircularProgress size={24} color="inherit" /> : "Sign In"}
           </Button>
           <Typography variant="body2" align="center" sx={{ color: "#616161" }}>
-            Don’t have an account?{" "}
+            Don't have an account?{" "}
             <Link to="/register" style={{ color: "#3f51b5", fontWeight: 600 }}>
               Register here
             </Link>

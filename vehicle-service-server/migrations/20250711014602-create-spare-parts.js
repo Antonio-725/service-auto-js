@@ -1,37 +1,39 @@
+'use strict';
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('Vehicles', {
+    await queryInterface.createTable('SpareParts', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
       },
-      make: {
+      name: {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      model: {
-        type: Sequelize.STRING,
+      price: {
+        type: Sequelize.FLOAT,
         allowNull: false,
-      },
-      year: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      plate: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        unique: true,
-      },
-      userId: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: {
-          model: 'Users',
-          key: 'id',
+        validate: {
+          min: 0,
         },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
+      },
+      picture: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      quantity: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        validate: {
+          min: 0,
+        },
+      },
+      criticalLevel: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
       },
       createdAt: {
         type: Sequelize.DATE,
@@ -41,12 +43,10 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false,
       },
-    }, {
-      charset: 'utf8mb4',
-      engine: 'InnoDB',
     });
   },
+
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('Vehicles');
+    await queryInterface.dropTable('SpareParts');
   },
 };

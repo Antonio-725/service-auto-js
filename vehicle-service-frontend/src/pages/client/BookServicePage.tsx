@@ -49,7 +49,7 @@ const BookServicePage = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [_success, setSuccess] = useState(false);
 
   const token = sessionStorage.getItem("token");
   const userId = sessionStorage.getItem("userId");

@@ -109,7 +109,7 @@ interface SendInvoiceEmailRequest {
 }
 
 // Add to existing interfaces
-interface VerifyOtpRequest {
+export interface VerifyOtpRequest {
   otp: string;
   userId: string;
 }

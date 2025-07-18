@@ -60,7 +60,7 @@ interface InvoiceItem {
   unitPrice: number;
   total: number;
 }
-interface User {
+export interface User {
   id: string;
   username: string;
   email: string;

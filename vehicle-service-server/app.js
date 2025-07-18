@@ -3,13 +3,24 @@ const express = require("express");
 const app = express();
 const path = require("path");
 require("dotenv").config();
+const cors = require("cors");
 
 // CORS Middleware
-const cors = require("cors");
+
+// app.use(cors({
+//   origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+//   credentials: true,
+//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["Content-Type", "Authorization"],
+// }));
+
+
 app.use(cors({
   origin: "http://localhost:5173",
   credentials: true,
 }));
+
+
 
 // Body parser middleware
 app.use(express.json());
@@ -23,6 +34,10 @@ const sparePartRoutes = require("./routes/sparePartRoutes");
 const sparePartRequestRoutes = require("./routes/sparePartRequestRoutes");
 const invoiceRoutes = require('./routes/invoices');
 const  verifyOtp  = require("./routes/auth.routes");
+app.get('/', (req, res) => {
+  res.send('🚀 Auto Service API is running');
+});
+
 
 
 app.use("/api/auth", authRoutes);

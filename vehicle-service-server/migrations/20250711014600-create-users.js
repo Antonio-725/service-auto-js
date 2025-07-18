@@ -1,3 +1,5 @@
+'use strict';
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('Users', {
@@ -15,6 +17,7 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
         unique: true,
+        validate: { isEmail: true },
       },
       phone: {
         type: Sequelize.STRING,
@@ -36,11 +39,9 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false,
       },
-    }, {
-      charset: 'utf8mb4',
-      engine: 'InnoDB',
     });
   },
+
   down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable('Users');
   },

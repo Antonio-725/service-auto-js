@@ -8,7 +8,7 @@ import {
   registerables
 } from 'chart.js';
 import type { ChartOptions } from 'chart.js';
-
+//import type { SVGProps } from 'react';
 // Register Chart.js components
 ChartJS.register(...registerables);
 
@@ -17,7 +17,9 @@ interface StatCard {
   title: string;
   value: string;
   change: string;
-  icon: React.ComponentType;
+  //icon: React.ComponentType;
+   icon: React.ComponentType<any>;
+  // icon: React.ComponentType<SVGProps<SVGSVGElement>>;
   color: string;
 }
 
@@ -84,7 +86,7 @@ const OverviewTab: React.FC<{
   serviceRequests: ServiceRequest[];
   mechanics: Mechanic[];
   onAssign: (requestId: string, mechanicId: string | null, status: string) => void;
-}> = ({ stats, statusCounts, serviceRequests, mechanics, onAssign }) => {
+}> = ({ stats, serviceRequests, mechanics, onAssign }) => {
   const { statusCountsByDate, sortedDates } = aggregateServiceData(serviceRequests);
 
   const chartData = {

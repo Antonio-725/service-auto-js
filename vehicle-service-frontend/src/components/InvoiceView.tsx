@@ -1,7 +1,7 @@
 // components/InvoiceView.tsx
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Receipt } from "lucide-react";
+//import { Receipt } from "lucide-react";
 import { getInvoices } from "../utils/apiClient";
 
 interface Invoice {
@@ -51,16 +51,30 @@ const InvoiceView: React.FC = () => {
 
   useEffect(() => {
     const fetchInvoice = async () => {
-      try {
-        if (!id) throw new Error("No invoice ID provided");
-        const data = await getInvoices(id);
-        setInvoice(data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+  try {
+    if (!id) throw new Error("No invoice ID provided");
+    const data = await getInvoices(id);
+    if (data.length === 0) {
+      throw new Error("Invoice not found");
+    }
+    setInvoice(data[0]); // Take the first invoice from the array
+  } catch (err: any) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+    // const fetchInvoice = async () => {
+    //   try {
+    //     if (!id) throw new Error("No invoice ID provided");
+    //     const data = await getInvoices(id);
+    //     setInvoice(data);
+    //   } catch (err: any) {
+    //     setError(err.message);
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
     fetchInvoice();
   }, [id]);
 

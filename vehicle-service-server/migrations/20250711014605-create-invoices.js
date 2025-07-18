@@ -1,4 +1,3 @@
-// migrations/YYYYMMDDHHMMSS-create-invoice.js
 'use strict';
 
 module.exports = {
@@ -16,6 +15,7 @@ module.exports = {
           model: 'Services',
           key: 'id',
         },
+        onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
       vehicleId: {
@@ -25,6 +25,7 @@ module.exports = {
           model: 'Vehicles',
           key: 'id',
         },
+        onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
       userId: {
@@ -34,12 +35,13 @@ module.exports = {
           model: 'Users',
           key: 'id',
         },
+        onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
       items: {
         type: Sequelize.JSON,
         allowNull: false,
-        defaultValue: '[]', // Default to empty JSON array
+        defaultValue: '[]',
       },
       laborCost: {
         type: Sequelize.DECIMAL(10, 2),
@@ -72,12 +74,10 @@ module.exports = {
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.NOW,
       },
       updatedAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.NOW,
       },
     });
   },

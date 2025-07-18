@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import ServiceRequestsTable from '../ServiceRequestsTable';
-import { ChevronDown } from 'lucide-react';
+
 import styles from '../adminComponents/styles/styles.module.css';
 
 // Types

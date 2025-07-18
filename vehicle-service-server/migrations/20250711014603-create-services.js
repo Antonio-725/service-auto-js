@@ -2,20 +2,25 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('SparePartRequests', {
+    await queryInterface.createTable('Services', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
       },
-      sparePartId: {
-        type: Sequelize.UUID,
+      description: {
+        type: Sequelize.STRING,
         allowNull: false,
+      },
+      mechanicId: {
+        type: Sequelize.UUID,
+        allowNull: true,
         references: {
-          model: 'SpareParts',
+          model: 'Users',
           key: 'id',
         },
-        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
       },
       vehicleId: {
         type: Sequelize.UUID,
@@ -24,50 +29,41 @@ module.exports = {
           model: 'Vehicles',
           key: 'id',
         },
+        onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
-      },
-      mechanicId: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: {
-          model: 'Users',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
-      },
-      quantity: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        validate: {
-          min: 1,
-        },
-      },
-      totalPrice: {
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: false,
-        validate: {
-          min: 0,
-        },
       },
       status: {
-        type: Sequelize.ENUM('Pending', 'Approved', 'Rejected'),
-        allowNull: false,
+        type: Sequelize.ENUM('Pending', 'In Progress', 'Completed', 'Cancelled'),
         defaultValue: 'Pending',
+      },
+      date: {
+        type: Sequelize.DATEONLY,
+        allowNull: false,
+      },
+      completedAt: {
+        type: Sequelize.DATEONLY,
+        allowNull: true,
+      },
+      rating: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        validate: {
+          min: 1,
+          max: 5,
+        },
       },
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.NOW,
       },
       updatedAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.NOW,
       },
     });
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('SparePartRequests');
+    await queryInterface.dropTable('Services');
   },
 };

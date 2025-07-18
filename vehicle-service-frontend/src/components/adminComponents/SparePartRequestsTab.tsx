@@ -43,7 +43,7 @@ interface SparePartRequest {
   vehicleId: string;
   mechanicId: string;
   quantity: number;
-  totalPrice?: string;
+  totalPrice?: number;
   status: 'Pending' | 'Approved' | 'Rejected';
   createdAt: string;
   updatedAt: string;
@@ -200,10 +200,11 @@ const SparePartRequestsManager: React.FC = () => {
     });
   };
 
-  const formatPrice = (price?: string) => {
-    if (price == null) return 'N/A';
-    const numericPrice = parseFloat(price);
-    return isNaN(numericPrice) ? 'N/A' : `$${numericPrice.toFixed(2)}`;
+  const formatPrice = (price: unknown) => {
+    const num = typeof price === 'string' ? parseFloat(price) : price;
+
+    if (typeof num !== 'number' || isNaN(num)) return 'N/A';
+    return `$${num.toFixed(2)}`;
   };
 
   if (loading) {
@@ -249,7 +250,7 @@ const SparePartRequestsManager: React.FC = () => {
         <ToggleButtonGroup
           value={statusFilter}
           exclusive
-          onChange={(e, newFilter) => setStatusFilter(newFilter || 'all')}
+          onChange={(_, newFilter) => setStatusFilter(newFilter || 'all')}
           size="small"
           aria-label="Filter by status"
         >
@@ -274,7 +275,7 @@ const SparePartRequestsManager: React.FC = () => {
         <ToggleButtonGroup
           value={timeFilter}
           exclusive
-          onChange={(e, newFilter) => setTimeFilter(newFilter || 'all')}
+          onChange={(_, newFilter) => setTimeFilter(newFilter || 'all')}
           size="small"
           aria-label="Filter by time"
         >
@@ -303,7 +304,7 @@ const SparePartRequestsManager: React.FC = () => {
             flex: 1, 
             overflow: 'auto',
             '& .MuiTableCell-root': {
-              padding: '12px 16px', // More compact cell padding
+              padding: '12px 16px',
             }
           }}
         >

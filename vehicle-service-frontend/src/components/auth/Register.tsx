@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -9,7 +10,8 @@ import {
   CircularProgress,
 } from "@mui/material";
 import AuthFormContainer from "./AuthFormContainer";
-import apiClient from "../../utils/apiClient"; // Note: no curly braces
+import apiClient from "../../utils/apiClient";
+
 const Register = () => {
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
@@ -18,8 +20,7 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  const navigate = useNavigate(); // ⬅️ React Router hook
+  const navigate = useNavigate();
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -32,35 +33,60 @@ const Register = () => {
   };
 
   const validatePasswordStrength = (password: string) => {
-    return password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
-  };
-
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError("");
-  setIsLoading(true);
-
-  // Input validation remains unchanged...
-  
-  try {
-    const response = await apiClient.post("/api/users/register", {
-      username,
-      email,
-      phone,
-      password,
-    });
-
-    console.log("Registration successful:", response.data);
-    navigate("/login");
-  } catch (err: any) {
-    const errorMessage =
-      err.response?.data?.message ||
-      "Registration failed. Please try again.";
-    setError(errorMessage);
-  } finally {
-    setIsLoading(false);
-  }
+  return password.length >= 4;
 };
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    // Input validation
+    if (!validateEmail(email)) {
+      setError("Please enter a valid email address");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!validatePhone(phone)) {
+      setError("Please enter a valid phone number");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!validatePasswordStrength(password)) {
+      setError("Password must be at least 5 characters with at least one uppercase letter and one number");
+      setIsLoading(false);
+      return;
+    }
+    
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await apiClient.post("/api/users/register", {
+        username,
+        email,
+        phone,
+        password,
+      });
+
+      console.log("Registration successful:", response.data);
+      navigate("/login");
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        "Registration failed. Please try again.";
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <AuthFormContainer title="Create Account">

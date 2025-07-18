@@ -5,7 +5,7 @@ import {
   CheckCircle,
   ChevronDown,
   User as UserIcon,
-  Car,
+ 
   Mail,
   Phone
 } from "lucide-react";

@@ -1,17 +1,12 @@
-"use strict";
+'use strict';
 
 module.exports = {
-  async up(queryInterface, Sequelize) {
-    // Drop existing Otps table (backup data if necessary)
-    await queryInterface.dropTable("Otps");
-
-    // Create Otps table with correct schema
-    await queryInterface.createTable("Otps", {
+  up: async (queryInterface, Sequelize) => {
+    await queryInterface.createTable('Otps', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
-        allowNull: false,
       },
       code: {
         type: Sequelize.STRING,
@@ -27,11 +22,13 @@ module.exports = {
       },
       userId: {
         type: Sequelize.UUID,
+        allowNull: false,
         references: {
-          model: "Users",
-          key: "id",
+          model: 'Users',
+          key: 'id',
         },
-        onDelete: "CASCADE",
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
       },
       createdAt: {
         type: Sequelize.DATE,
@@ -44,8 +41,7 @@ module.exports = {
     });
   },
 
-  async down(queryInterface) {
-    // Restore original table (adjust based on your previous schema)
-    await queryInterface.dropTable("Otps");
+  down: async (queryInterface, Sequelize) => {
+    await queryInterface.dropTable('Otps');
   },
 };

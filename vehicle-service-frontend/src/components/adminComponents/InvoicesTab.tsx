@@ -21,7 +21,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid,
   Chip,
   TableContainer,
 } from '@mui/material';
@@ -34,33 +33,65 @@ import {
 } from '../../utils/apiClient';
 import Notification from '../usables/Notification';
 import Loading from '../usables/Loading';
-import type { Service, SparePart, SparePartRequest, InvoiceItem, Invoice } from '../../types/invoicetab';
+import type { Service, SparePart, SparePartRequest, Invoice } from '../../types/invoicetab';
+
+// Updated interfaces to fix type mismatches
+interface Vehicle {
+  id: string;
+  name?: string;
+  make?: string;
+  model?: string;
+  licensePlate?: string;
+}
+
+export interface User {
+  id: string;
+  email?: string;
+  name?: string;
+}
+
+interface Mechanic {
+  id: string;
+  name?: string;
+}
+
+interface ServiceWithInvoice extends Service {
+  vehicle: Vehicle;
+  mechanic: Mechanic;
+  user?: User;
+}
+
+interface InvoiceWithRelations extends Invoice {
+  service?: ServiceWithInvoice;
+  vehicle?: Vehicle;
+  user?: User;
+}
 
 interface State {
-  services: Service[];
-  selectedService: Service | null;
+  services: ServiceWithInvoice[];
+  selectedService: ServiceWithInvoice | null;
   spareParts: SparePart[];
   laborCost: number;
   tax: number;
   loading: boolean;
-  invoices: Invoice[];
+  invoices: InvoiceWithRelations[];
   editModal: boolean;
-  selectedInvoice: Invoice | null;
+  selectedInvoice: InvoiceWithRelations | null;
   saveLoading: boolean;
   deleteLoading: boolean;
   notification: { open: boolean; message: string; type: 'success' | 'error' | 'warning' | 'info' };
 }
 
 type Action =
-  | { type: 'SET_SERVICES'; payload: Service[] }
-  | { type: 'SET_SELECTED_SERVICE'; payload: Service | null }
+  | { type: 'SET_SERVICES'; payload: ServiceWithInvoice[] }
+  | { type: 'SET_SELECTED_SERVICE'; payload: ServiceWithInvoice | null }
   | { type: 'SET_SPARE_PARTS'; payload: SparePart[] }
   | { type: 'SET_LABOR_COST'; payload: number }
   | { type: 'SET_TAX'; payload: number }
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_INVOICES'; payload: Invoice[] }
+  | { type: 'SET_INVOICES'; payload: InvoiceWithRelations[] }
   | { type: 'SET_EDIT_MODAL'; payload: boolean }
-  | { type: 'SET_SELECTED_INVOICE'; payload: Invoice | null }
+  | { type: 'SET_SELECTED_INVOICE'; payload: InvoiceWithRelations | null }
   | { type: 'SET_SAVE_LOADING'; payload: boolean }
   | { type: 'SET_DELETE_LOADING'; payload: boolean }
   | { type: 'SET_NOTIFICATION'; payload: State['notification'] };
@@ -130,12 +161,15 @@ const InvoicesTab: React.FC = () => {
     return (laborCost + partsTotal + tax).toFixed(2);
   }, [spareParts, laborCost, tax]);
 
-  const getVehicleName = useCallback((invoice: Invoice): string => {
+  const getVehicleName = useCallback((invoice: InvoiceWithRelations): string => {
     const vehicle = invoice.service?.vehicle || invoice.vehicle;
     if (!vehicle) return 'N/A';
     if (vehicle.name) return vehicle.name;
-    if (vehicle.make && vehicle.model) return `${vehicle.make} ${vehicle.model} (${vehicle.plate})`;
-    if (vehicle.plate) return vehicle.plate;
+    if (vehicle.make && vehicle.model) {
+      const plateInfo = vehicle.licensePlate ? ` (${vehicle.licensePlate})` : '';
+      return `${vehicle.make} ${vehicle.model}${plateInfo}`;
+    }
+    if (vehicle.licensePlate) return vehicle.licensePlate;
     return vehicle.id.slice(0, 8);
   }, []);
 
@@ -143,9 +177,16 @@ const InvoicesTab: React.FC = () => {
     const loadData = async () => {
       try {
         dispatch({ type: 'SET_LOADING', payload: true });
-        const [servicesData, invoicesData] = await Promise.all([fetchCompletedServicesWithoutInvoice(), getInvoices()]);
-        dispatch({ type: 'SET_SERVICES', payload: servicesData });
-        dispatch({ type: 'SET_INVOICES', payload: invoicesData });
+        const [servicesData, invoicesData] = await Promise.all([
+          fetchCompletedServicesWithoutInvoice(),
+          getInvoices()
+        ]);
+
+        const typedServices = servicesData as ServiceWithInvoice[];
+        const typedInvoices = invoicesData as InvoiceWithRelations[];
+
+        dispatch({ type: 'SET_SERVICES', payload: typedServices });
+        dispatch({ type: 'SET_INVOICES', payload: typedInvoices });
       } catch (error: unknown) {
         console.error('Error loading data:', (error as Error).message);
         showNotification('Failed to load data', 'error');
@@ -213,8 +254,15 @@ const InvoicesTab: React.FC = () => {
         status: 'Draft',
       });
 
+      const invoiceWithRelations: InvoiceWithRelations = {
+        ...newInvoice,
+        service: selectedService,
+        vehicle: selectedService.vehicle,
+        user: selectedService.user
+      };
+
       dispatch({ type: 'SET_SERVICES', payload: services.filter(s => s.id !== selectedService.id) });
-      dispatch({ type: 'SET_INVOICES', payload: [{ ...newInvoice, service: selectedService, vehicle: selectedService.vehicle }, ...invoices] });
+      dispatch({ type: 'SET_INVOICES', payload: [invoiceWithRelations, ...invoices] });
       showNotification('Invoice created successfully', 'success');
 
       dispatch({ type: 'SET_SELECTED_SERVICE', payload: null });
@@ -228,7 +276,7 @@ const InvoicesTab: React.FC = () => {
     }
   }, [selectedService, spareParts, laborCost, tax, services, invoices, showNotification]);
 
-  const handleEditClick = useCallback((invoice: Invoice) => {
+  const handleEditClick = useCallback((invoice: InvoiceWithRelations) => {
     dispatch({ type: 'SET_SELECTED_INVOICE', payload: invoice });
     dispatch({ type: 'SET_EDIT_MODAL', payload: true });
   }, []);
@@ -281,9 +329,13 @@ const InvoicesTab: React.FC = () => {
       dispatch({ type: 'SET_INVOICES', payload: invoices.filter(inv => inv.id !== selectedInvoice.id) });
 
       if (selectedInvoice.service) {
-        const restoredService = {
+        const restoredService: ServiceWithInvoice = {
           ...selectedInvoice.service,
-          vehicle: selectedInvoice.service.vehicle || selectedInvoice.vehicle || { id: selectedInvoice.vehicleId },
+          vehicle: selectedInvoice.service.vehicle || selectedInvoice.vehicle || {
+            id: selectedInvoice.vehicleId || 'unknown',
+            licensePlate: 'Unknown'
+          },
+          mechanic: selectedInvoice.service.mechanic || { id: selectedInvoice.userId || 'unknown' }
         };
         dispatch({ type: 'SET_SERVICES', payload: [...services, restoredService] });
       }
@@ -317,7 +369,7 @@ const InvoicesTab: React.FC = () => {
           )}
           {services.map((service) => (
             <MenuItem key={service.id} value={service.id}>
-              {`${service.description} - ${service.vehicle.make} ${service.vehicle.model} (${service.vehicle.plate}) - ${new Date(service.date).toLocaleDateString()}`}
+              {`${service.description} - ${service.vehicle.make} ${service.vehicle.model} (${service.vehicle.licensePlate}) - ${new Date(service.date).toLocaleDateString()}`}
             </MenuItem>
           ))}
         </Select>
@@ -347,6 +399,17 @@ const InvoicesTab: React.FC = () => {
             </TableBody>
           </Table>
           <Divider sx={{ my: 2 }} />
+          <TextField
+            label="Labor Cost (KES)"
+            type="number"
+            value={laborCost}
+            onChange={(e) => dispatch({ type: 'SET_LABOR_COST', payload: Number(e.target.value) })}
+
+
+            fullWidth
+            sx={{ mb: 2 }}
+            InputProps={{ inputProps: { min: 0 } }}
+          />
           <TextField
             label="Labor Cost (KES)"
             type="number"
@@ -384,7 +447,7 @@ const InvoicesTab: React.FC = () => {
       <Typography variant="h5" gutterBottom className="invoices-header">
         Existing Invoices
       </Typography>
-      
+
       <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 400px)', overflow: 'auto' }}>
         <Table stickyHeader className="invoices-table">
           <TableHead>
@@ -448,8 +511,17 @@ const InvoicesTab: React.FC = () => {
         <DialogTitle className="invoices-dialog-title">Invoice Details</DialogTitle>
         <DialogContent className="invoices-dialog-content">
           {selectedInvoice && (
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 3,
+                '& > *': {
+                  flex: { xs: '1 1 100%', md: '1 1 calc(50% - 24px)' }, // 1 column on xs, 2 columns on md+
+                },
+              }}
+            >
+              <Box>
                 <Typography variant="h6" gutterBottom>Invoice Information</Typography>
                 <Typography><strong>Invoice ID:</strong> {selectedInvoice.id}</Typography>
                 <Typography><strong>Service ID:</strong> {selectedInvoice.serviceId}</Typography>
@@ -457,8 +529,8 @@ const InvoicesTab: React.FC = () => {
                 <Typography><strong>Vehicle:</strong> {getVehicleName(selectedInvoice)}</Typography>
                 <Typography><strong>Created:</strong> {new Date(selectedInvoice.createdAt).toLocaleString()}</Typography>
                 <Typography><strong>User ID:</strong> {selectedInvoice.userId}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
+              </Box>
+              <Box>
                 <Typography variant="h6" gutterBottom>Cost Breakdown</Typography>
                 <Typography><strong>Labor Cost:</strong> KES {Number(selectedInvoice.laborCost).toFixed(2)}</Typography>
                 <Typography><strong>Parts Cost:</strong> KES {Number(selectedInvoice.partsCost).toFixed(2)}</Typography>
@@ -466,9 +538,9 @@ const InvoicesTab: React.FC = () => {
                 <Typography variant="h6" sx={{ mt: 1 }}>
                   <strong>Total Amount:</strong> KES {Number(selectedInvoice.totalAmount).toFixed(2)}
                 </Typography>
-              </Grid>
+              </Box>
               {selectedInvoice.items && selectedInvoice.items.length > 0 && (
-                <Grid item xs={12}>
+                <Box sx={{ flex: '1 1 100%' }}>
                   <Typography variant="h6" gutterBottom>Invoice Items</Typography>
                   <Table size="small">
                     <TableHead>
@@ -490,9 +562,9 @@ const InvoicesTab: React.FC = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </Grid>
+                </Box>
               )}
-              <Grid item xs={12}>
+              <Box sx={{ flex: '1 1 100%' }}>
                 <Divider sx={{ my: 2 }} />
                 <Typography variant="h6" gutterBottom>Update Status</Typography>
                 <FormControl fullWidth>
@@ -520,13 +592,13 @@ const InvoicesTab: React.FC = () => {
                       Paid
                     </MenuItem>
                     <MenuItem value="Overdue">
-                      <Chip label="Overdue" color="error" size="small" sx={{ mr: 1 }} />
+                      <Chip label="Overoverdue" color="error" size="small" sx={{ mr: 1 }} />
                       Overdue
                     </MenuItem>
                   </Select>
                 </FormControl>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           )}
         </DialogContent>
         <DialogActions className="invoices-dialog-actions">

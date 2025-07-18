@@ -6,7 +6,8 @@ import { Close as CloseIcon, CheckCircle as SuccessIcon, Error as ErrorIcon } fr
 interface NotificationProps {
   open: boolean;
   message: string;
-  type: 'success' | 'error';
+  //type: 'success' | 'error';
+  type: 'success' | 'error' | 'warning' | 'info';
   onClose: () => void;
   autoHideDuration?: number; // Optional duration in milliseconds
 }

@@ -1,31 +1,39 @@
+'use strict';
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('SpareParts', {
+    await queryInterface.createTable('Vehicles', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
       },
-      name: {
+      make: {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      price: {
-        type: Sequelize.FLOAT,
-        allowNull: false,
-      },
-      picture: {
+      model: {
         type: Sequelize.STRING,
-        allowNull: true,
-      },
-      quantity: {
-        type: Sequelize.INTEGER,
         allowNull: false,
       },
-      criticalLevel: {
-        type: Sequelize.BOOLEAN,
+      year: {
+        type: Sequelize.STRING,
         allowNull: false,
-        defaultValue: false,
+      },
+      plate: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true,
+      },
+      userId: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: 'Users',
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
       },
       createdAt: {
         type: Sequelize.DATE,
@@ -35,12 +43,10 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false,
       },
-    }, {
-      charset: 'utf8mb4',
-      engine: 'InnoDB',
     });
   },
+
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('SpareParts');
+    await queryInterface.dropTable('Vehicles');
   },
 };

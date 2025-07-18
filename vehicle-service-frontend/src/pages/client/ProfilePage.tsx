@@ -8,7 +8,6 @@ import {
   Divider, 
   Switch,
   FormControlLabel,
-  Grid,
   CircularProgress
 } from "@mui/material";
 import { 
@@ -66,7 +65,6 @@ const ProfilePage = () => {
         });
         setUserData({
           ...response.data,
-          // Add default values for fields that might not come from the backend
           address: response.data.address || '',
           notifications: response.data.notifications !== undefined ? response.data.notifications : true,
           twoFactorAuth: response.data.twoFactorAuth !== undefined ? response.data.twoFactorAuth : false
@@ -101,10 +99,8 @@ const ProfilePage = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setIsEditing(false);
-      // Optionally: Show success message
     } catch (error) {
       console.error("Error updating user data:", error);
-      // Optionally: Show error message
     }
   };
 
@@ -158,8 +154,12 @@ const ProfilePage = () => {
 
         <Divider sx={{ my: 3 }} />
 
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={6} component="div">
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' }, 
+          gap: 4 
+        }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="h6" mb={3} fontWeight="bold">
               Personal Information
             </Typography>
@@ -229,9 +229,9 @@ const ProfilePage = () => {
                 }}
               />
             </Box>
-          </Grid>
+          </Box>
 
-          <Grid item xs={12} md={6} component="div">
+          <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="h6" mb={3} fontWeight="bold">
               Account Settings
             </Typography>
@@ -308,8 +308,8 @@ const ProfilePage = () => {
                 </Button>
               </Box>
             )}
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       <Typography variant="body2" color="text.secondary" mt={2}>
