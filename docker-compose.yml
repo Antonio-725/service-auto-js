@@ -1,3 +1,6 @@
+# docker-compose.yml
+# version: '3.8'
+
 version: '3.8'
 
 services:
@@ -5,16 +8,16 @@ services:
     image: mysql:8.0
     container_name: autoservice-db
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_ROOT_HOST=${MYSQL_ROOT_HOST}
+      - MYSQL_ROOT_PASSWORD=@Antonio725
+      - MYSQL_DATABASE=autoservice
+      - MYSQL_ROOT_HOST=%
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p'${MYSQL_ROOT_PASSWORD}'"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p'@Antonio725'"]
       timeout: 20s
       interval: 10s
       retries: 10
@@ -28,14 +31,15 @@ services:
     ports:
       - "5001:5000"
     environment:
-      - RUN_MIGRATIONS=${RUN_MIGRATIONS}
-      - NODE_ENV=${NODE_ENV}
-      - PORT=${PORT}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=${DB_HOST}
-      - JWT_SECRET=${JWT_SECRET}
+      - RUN_MIGRATIONS=true
+      - NODE_ENV=production
+      - PORT=5000
+      - DB_NAME=autoservice
+      - DB_USER=root
+      - DB_PASSWORD=@Antonio725
+      - DB_HOST=db
+      - JWT_SECRET=antonio123
+      
     volumes:
       - ./vehicle-service-server:/app
     depends_on:
@@ -44,6 +48,7 @@ services:
     restart: unless-stopped
     networks:
       - autoservice-network
+   # command: sh -c 'if [ "$RUN_MIGRATIONS" = "true" ]; then npx sequelize-cli db:migrate || echo "Migration failed, continuing..."; sleep 5; fi && node index.js'
     command: sh -c 'if [ "$RUN_MIGRATIONS" = "true" ]; then npx sequelize-cli db:migrate --env production || echo "Migration failed, continuing..."; sleep 10; fi && node index.js'
 
   frontend:
@@ -63,3 +68,77 @@ volumes:
 networks:
   autoservice-network:
     driver: bridge
+
+    
+
+
+
+
+
+
+
+#     version: '3.8'
+
+# services:
+#   db:
+#     image: mysql:8.0
+#     container_name: autoservice-db
+#     environment:
+#       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+#       - MYSQL_DATABASE=${MYSQL_DATABASE}
+#       - MYSQL_ROOT_HOST=${MYSQL_ROOT_HOST}
+#     ports:
+#       - "3307:3306"
+#     volumes:
+#       - mysql_data:/var/lib/mysql
+#       - ./mysql-init:/docker-entrypoint-initdb.d
+#     healthcheck:
+#       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p'${MYSQL_ROOT_PASSWORD}'"]
+#       timeout: 20s
+#       interval: 10s
+#       retries: 10
+#     restart: unless-stopped
+#     networks:
+#       - autoservice-network
+
+#   backend:
+#     build: ./vehicle-service-server
+#     container_name: autoservice-backend
+#     ports:
+#       - "5001:5000"
+#     environment:
+#       - RUN_MIGRATIONS=${RUN_MIGRATIONS}
+#       - NODE_ENV=${NODE_ENV}
+#       - PORT=${PORT}
+#       - DB_NAME=${DB_NAME}
+#       - DB_USER=${DB_USER}
+#       - DB_PASSWORD=${DB_PASSWORD}
+#       - DB_HOST=${DB_HOST}
+#       - JWT_SECRET=${JWT_SECRET}
+#     volumes:
+#       - ./vehicle-service-server:/app
+#     depends_on:
+#       db:
+#         condition: service_healthy
+#     restart: unless-stopped
+#     networks:
+#       - autoservice-network
+#     command: sh -c 'if [ "$RUN_MIGRATIONS" = "true" ]; then npx sequelize-cli db:migrate --env production || echo "Migration failed, continuing..."; sleep 10; fi && node index.js'
+
+#   frontend:
+#     build: ./vehicle-service-frontend
+#     container_name: autoservice-frontend
+#     ports:
+#       - "5173:80"
+#     volumes:
+#       - ./vehicle-service-frontend:/app
+#     restart: unless-stopped
+#     networks:
+#       - autoservice-network
+
+# volumes:
+#   mysql_data:
+
+# networks:
+#   autoservice-network:
+#     driver: bridge

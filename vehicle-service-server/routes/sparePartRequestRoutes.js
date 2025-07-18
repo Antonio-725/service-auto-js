@@ -1,18 +1,3 @@
-// const express = require('express');
-// const router = express.Router();
-// const { authenticate } = require('../middleware/auth');
-// const {
-//   createSparePartRequest,
-//   getAllSparePartRequests,
-//   updateSparePartRequestStatus,
-// } = require('../controllers/sparePartRequestController');
-
-// // Routes
-// router.post('/', authenticate, createSparePartRequest);
-// router.get('/', authenticate, getAllSparePartRequests);
-// router.patch('/:id/status', authenticate, updateSparePartRequestStatus);
-
-// module.exports = router;
 
 // routes/sparePartRequestRoutes.js
 const express = require('express');
